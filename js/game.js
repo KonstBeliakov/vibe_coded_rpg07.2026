@@ -493,8 +493,99 @@ class Game {
             }
         }
 
+        // Draw minimap
+        this.drawMinimap(ctx);
+
         // UI text
         this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}`;
+    }
+
+    drawMinimap(ctx) {
+        const mapSize = 150;
+        const mapX = this.width - mapSize - 15;
+        const mapY = this.height - mapSize - 15;
+        const tileSize = 4;
+        const viewRadius = Math.floor(mapSize / tileSize / 2);
+
+        // Background
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(mapX, mapY, mapSize, mapSize);
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(mapX, mapY, mapSize, mapSize);
+
+        // Label
+        ctx.fillStyle = '#aaa';
+        ctx.font = '9px monospace';
+        ctx.fillText('Карта', mapX + 4, mapY + 12);
+
+        // Center tile (player position)
+        const centerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const centerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Draw tiles
+        for (let dy = -viewRadius; dy <= viewRadius; dy++) {
+            for (let dx = -viewRadius; dx <= viewRadius; dx++) {
+                const tx = centerTileX + dx;
+                const ty = centerTileY + dy;
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+
+                if (this.tileMap.isWall(tx, ty)) {
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(sx, sy, tileSize, tileSize);
+                } else {
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(sx, sy, tileSize, tileSize);
+                }
+            }
+        }
+
+        // Draw chests on minimap
+        ctx.fillStyle = '#ffd54f';
+        for (const chest of this.chests) {
+            if (chest.opened) continue;
+            const dx = Math.floor(chest.x / TILE_SIZE) - centerTileX;
+            const dy = Math.floor(chest.y / TILE_SIZE) - centerTileY;
+            if (Math.abs(dx) <= viewRadius && Math.abs(dy) <= viewRadius) {
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+                ctx.fillRect(sx, sy, tileSize, tileSize);
+            }
+        }
+
+        // Draw potions on minimap
+        ctx.fillStyle = '#42a5f5';
+        for (const potion of this.potions) {
+            if (potion.collected) continue;
+            const dx = Math.floor(potion.x / TILE_SIZE) - centerTileX;
+            const dy = Math.floor(potion.y / TILE_SIZE) - centerTileY;
+            if (Math.abs(dx) <= viewRadius && Math.abs(dy) <= viewRadius) {
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+                ctx.fillRect(sx, sy, tileSize, tileSize);
+            }
+        }
+
+        // Draw enemies on minimap
+        ctx.fillStyle = '#e53935';
+        for (const enemy of this.enemies) {
+            const dx = Math.floor(enemy.x / TILE_SIZE) - centerTileX;
+            const dy = Math.floor(enemy.y / TILE_SIZE) - centerTileY;
+            if (Math.abs(dx) <= viewRadius && Math.abs(dy) <= viewRadius) {
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+                ctx.fillRect(sx, sy, tileSize, tileSize);
+            }
+        }
+
+        // Draw player on minimap
+        ctx.fillStyle = '#4caf50';
+        const playerDX = 0;
+        const playerDY = 0;
+        const psx = mapX + (playerDX + viewRadius) * tileSize + 2;
+        const psy = mapY + (playerDY + viewRadius) * tileSize + 16;
+        ctx.fillRect(psx - 1, psy - 1, tileSize + 2, tileSize + 2);
     }
 
     gameLoop(time) {
