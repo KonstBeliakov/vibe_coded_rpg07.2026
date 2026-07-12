@@ -16,10 +16,14 @@ class Game {
         this.player = new Player(0, 0);
         this.enemies = [];
         this.arrows = [];
+        this.chests = [];
+        this.potions = [];
         this.mouseX = 0;
         this.mouseY = 0;
         this.spawnTimer = 0;
         this.spawnInterval = 2000;
+        this.chestSpawnTimer = 0;
+        this.chestSpawnInterval = 15000;
         this.playerXP = 0;
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
@@ -49,6 +53,9 @@ class Game {
             if (e.key === ' ') {
                 e.preventDefault();
                 this.playerAttack();
+            }
+            if (e.key === 'e' || e.key === 'E') {
+                this.interact();
             }
             const num = parseInt(e.key);
             if (num >= 1 && num <= 8) {
@@ -83,6 +90,46 @@ class Game {
         this.lastTime = performance.now();
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
+    }
+
+    interact() {
+        const px = this.player.x;
+        const py = this.player.y;
+
+        // Check chests
+        for (const chest of this.chests) {
+            if (chest.opened) continue;
+            const dx = chest.x - px;
+            const dy = chest.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= chest.interactRange) {
+                const loot = chest.open();
+                if (loot) {
+                    this.audio.playHit();
+                    this.particles.emit(chest.x, chest.y, '#ffd700', 10, 3, 25, 4);
+                    for (const item of loot) {
+                        if (item === 'potion_health' || item === 'potion_speed') {
+                            const type = item === 'potion_health' ? 'health' : 'speed';
+                            this.potions.push(new Potion(chest.x + (Math.random() - 0.5) * 20, chest.y + (Math.random() - 0.5) * 20, type));
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        // Check potions on ground
+        for (const potion of this.potions) {
+            if (potion.collected) continue;
+            const dx = potion.x - px;
+            const dy = potion.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 30) {
+                potion.apply(this.player);
+                this.audio.playLevelUp();
+                this.particles.emit(potion.x, potion.y, potion.type === 'health' ? '#e53935' : '#42a5f5', 8, 3, 20, 3);
+            }
+        }
     }
 
     saveGame() {
@@ -140,6 +187,8 @@ class Game {
         this.player.applyItemStats(this.slots[this.selectedSlot]);
         this.enemies = [];
         this.arrows = [];
+        this.chests = [];
+        this.potions = [];
         this.particles = new ParticleSystem();
         this.spawnTimer = 0;
         this.tileMap = new TileMap(42);
@@ -198,6 +247,25 @@ class Game {
             enemy = new FlyingEnemy(x, y);
         }
         this.enemies.push(enemy);
+    }
+
+    spawnChest() {
+        // Find a random empty tile near the player
+        for (let attempt = 0; attempt < 20; attempt++) {
+            const tx = Math.floor(this.player.x / TILE_SIZE) + Math.floor((Math.random() - 0.5) * 20);
+            const ty = Math.floor(this.player.y / TILE_SIZE) + Math.floor((Math.random() - 0.5) * 20);
+            if (!this.tileMap.isWall(tx, ty)) {
+                const cx = tx * TILE_SIZE + TILE_SIZE / 2;
+                const cy = ty * TILE_SIZE + TILE_SIZE / 2;
+                // Check not too close to player
+                const dx = cx - this.player.x;
+                const dy = cy - this.player.y;
+                if (Math.sqrt(dx * dx + dy * dy) > 100) {
+                    this.chests.push(new Chest(cx, cy));
+                    break;
+                }
+            }
+        }
     }
 
     playerAttack() {
@@ -307,6 +375,11 @@ class Game {
             }
         }
 
+        // Update potions
+        for (const potion of this.potions) {
+            potion.update();
+        }
+
         this.particles.update();
 
         this.spawnTimer += dt;
@@ -315,11 +388,19 @@ class Game {
             this.spawnEnemy();
         }
 
+        this.chestSpawnTimer += dt;
+        if (this.chestSpawnTimer >= this.chestSpawnInterval) {
+            this.chestSpawnTimer = 0;
+            if (this.chests.length < 5) {
+                this.spawnChest();
+            }
+        }
+
         // Check death
         if (this.player.health <= 0) {
             this.gameOver = true;
             this.deathScreen.style.display = 'flex';
-            this.deathStats.textContent = `Уровень: ${this.playerLevel} | XP: ${this.playerXP} | Убито врагов: ~`;
+            this.deathStats.textContent = `Уровень: ${this.playerLevel} | XP: ${this.playerXP}`;
             localStorage.removeItem('rpg3_save');
         }
     }
@@ -333,6 +414,16 @@ class Game {
         ctx.fillRect(0, 0, this.width, this.height);
 
         this.tileMap.draw(ctx, offsetX, offsetY);
+
+        // Draw chests
+        for (const chest of this.chests) {
+            chest.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw potions
+        for (const potion of this.potions) {
+            potion.draw(ctx, offsetX, offsetY);
+        }
 
         for (const arrow of this.arrows) {
             arrow.draw(ctx, offsetX, offsetY);
@@ -353,19 +444,16 @@ class Game {
         const hpY = 50;
         const hpPercent = this.player.health / this.player.maxHealth;
 
-        // Background
         ctx.fillStyle = '#333';
         ctx.fillRect(hpX, hpY, hpBarWidth, hpBarHeight);
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 1;
         ctx.strokeRect(hpX, hpY, hpBarWidth, hpBarHeight);
 
-        // HP fill
         const hpColor = hpPercent > 0.5 ? '#4caf50' : hpPercent > 0.25 ? '#ff9800' : '#e53935';
         ctx.fillStyle = hpColor;
         ctx.fillRect(hpX + 1, hpY + 1, (hpBarWidth - 2) * hpPercent, hpBarHeight - 2);
 
-        // HP text
         ctx.fillStyle = '#fff';
         ctx.font = '12px monospace';
         ctx.textAlign = 'center';
