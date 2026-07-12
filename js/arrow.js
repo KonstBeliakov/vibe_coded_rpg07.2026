@@ -21,11 +21,38 @@ class Arrow {
     draw(ctx, offsetX, offsetY) {
         const screenX = this.x + offsetX;
         const screenY = this.y + offsetY;
-        ctx.fillStyle = '#ffd54f';
+        const angle = Math.atan2(this.vy, this.vx);
+
         ctx.save();
         ctx.translate(screenX, screenY);
-        ctx.rotate(Math.atan2(this.vy, this.vx));
-        ctx.fillRect(-this.size, -2, this.size * 2, 4);
+        ctx.rotate(angle);
+
+        // Arrow shaft
+        ctx.strokeStyle = '#8d6e63';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-this.size, 0);
+        ctx.lineTo(this.size, 0);
+        ctx.stroke();
+
+        // Arrow head
+        ctx.fillStyle = '#bdbdbd';
+        ctx.beginPath();
+        ctx.moveTo(this.size + 3, 0);
+        ctx.lineTo(this.size - 2, -4);
+        ctx.lineTo(this.size - 2, 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Arrow fletching
+        ctx.fillStyle = '#d32f2f';
+        ctx.beginPath();
+        ctx.moveTo(-this.size - 2, 0);
+        ctx.lineTo(-this.size + 2, -4);
+        ctx.lineTo(-this.size + 2, 4);
+        ctx.closePath();
+        ctx.fill();
+
         ctx.restore();
     }
 }

@@ -20,6 +20,9 @@ class Game {
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
 
+        this.particles = new ParticleSystem();
+        this.audio = new AudioSystem();
+
         // Inventory slots
         this.slots = new Array(8).fill(null);
         this.selectedSlot = 0;
@@ -36,7 +39,6 @@ class Game {
                 e.preventDefault();
                 this.playerAttack();
             }
-            // Slot selection with number keys 1-8
             const num = parseInt(e.key);
             if (num >= 1 && num <= 8) {
                 this.selectedSlot = num - 1;
@@ -79,6 +81,8 @@ class Game {
             this.player.baseAttackDamage += 3;
             this.player.baseAttackRange += 2;
             this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.audio.playLevelUp();
+            this.particles.emit(this.player.x, this.player.y, '#ffd700', 20, 5, 40, 5);
         }
     }
 
@@ -131,6 +135,7 @@ class Game {
             const worldMouseX = px + (this.mouseX - this.width / 2);
             const worldMouseY = py + (this.mouseY - this.height / 2);
             this.arrows.push(new Arrow(px, py, worldMouseX, worldMouseY));
+            this.audio.playShoot();
         } else {
             const range = this.player.attackRange;
             const damage = this.player.attackDamage;
@@ -142,8 +147,12 @@ class Game {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist <= range) {
                     enemy.health -= damage;
+                    this.audio.playHit();
+                    this.particles.emit(enemy.x, enemy.y, '#ff5252', 8, 3, 20, 3);
                     if (enemy.health <= 0) {
                         this.addXP(enemy.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
                         this.enemies.splice(i, 1);
                     }
                 }
@@ -184,6 +193,8 @@ class Game {
             enemy.update(this.player.x, this.player.y);
             if (enemy.tryAttack(this.player.x, this.player.y)) {
                 this.player.health -= enemy.attackDamage;
+                this.audio.playPlayerHit();
+                this.particles.emit(this.player.x, this.player.y, '#ff1744', 10, 3, 20, 3);
                 if (this.player.health < 0) this.player.health = 0;
             }
         }
@@ -200,8 +211,12 @@ class Game {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < enemy.size / 2 + arrow.size) {
                     enemy.health -= arrow.damage;
+                    this.audio.playHit();
+                    this.particles.emit(enemy.x, enemy.y, '#ff5252', 8, 3, 20, 3);
                     if (enemy.health <= 0) {
                         this.addXP(enemy.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
                         this.enemies.splice(j, 1);
                     }
                     hit = true;
@@ -213,6 +228,8 @@ class Game {
                 this.arrows.splice(i, 1);
             }
         }
+
+        this.particles.update();
 
         this.spawnTimer += dt;
         if (this.spawnTimer >= this.spawnInterval) {
@@ -241,6 +258,8 @@ class Game {
 
         this.player.draw(ctx, offsetX, offsetY);
 
+        this.particles.draw(ctx, offsetX, offsetY);
+
         // Draw inventory
         const slotSize = 50;
         const slotMargin = 5;
@@ -258,7 +277,6 @@ class Game {
             ctx.lineWidth = 1;
             ctx.strokeRect(sx, sy, slotSize, slotSize);
 
-            // Slot number
             ctx.fillStyle = '#aaa';
             ctx.font = '10px monospace';
             ctx.fillText(i + 1, sx + 3, sy + 12);

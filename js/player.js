@@ -58,6 +58,7 @@ class Player {
         const screenX = this.x + offsetX;
         const screenY = this.y + offsetY;
 
+        // Attack animation - sword slash arc
         if (this.attackAnimTimer > 0) {
             const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
             const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
@@ -75,12 +76,37 @@ class Player {
             ctx.restore();
         }
 
+        // Body - circle with details
+        const r = this.size / 2;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body
         ctx.fillStyle = this.color;
-        ctx.fillRect(
-            screenX - this.size / 2,
-            screenY - this.size / 2,
-            this.size,
-            this.size
-        );
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = '#388e3c';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(screenX - 5, screenY - 3, 4, 0, Math.PI * 2);
+        ctx.arc(screenX + 5, screenY - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(screenX - 4, screenY - 2, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 6, screenY - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
     }
 }

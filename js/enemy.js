@@ -47,7 +47,9 @@ class Enemy {
     draw(ctx, offsetX, offsetY) {
         const screenX = this.x + offsetX;
         const screenY = this.y + offsetY;
+        const r = this.size / 2;
 
+        // Attack animation
         if (this.attackAnimTimer > 0) {
             const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
             const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
@@ -61,32 +63,69 @@ class Enemy {
             ctx.strokeStyle = '#ff8a80';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            const r = this.size / 2 + 3;
+            const ar = r + 3;
             const startA = -Math.PI * 0.6;
             const endA = startA + angle;
-            ctx.arc(0, 0, r, startA, endA);
+            ctx.arc(0, 0, ar, startA, endA);
             ctx.stroke();
             ctx.restore();
         }
 
-        ctx.fillStyle = this.color;
-        ctx.fillRect(
-            screenX - this.size / 2,
-            screenY - this.size / 2,
-            this.size,
-            this.size
-        );
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
+        // Body - diamond/rhombus shape
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY - r);
+        ctx.lineTo(screenX + r, screenY);
+        ctx.lineTo(screenX, screenY + r);
+        ctx.lineTo(screenX - r, screenY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = this.darkenColor(this.color, 0.3);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(screenX - 4, screenY - 3, 3, 0, Math.PI * 2);
+        ctx.arc(screenX + 4, screenY - 3, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#c62828';
+        ctx.beginPath();
+        ctx.arc(screenX - 3, screenY - 2, 1.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 5, screenY - 2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
         const barWidth = this.size + 10;
         const barHeight = 4;
         const barX = screenX - barWidth / 2;
-        const barY = screenY - this.size / 2 - 10;
+        const barY = screenY - r - 10;
         const healthPercent = this.health / this.maxHealth;
 
         ctx.fillStyle = '#c62828';
         ctx.fillRect(barX, barY, barWidth, barHeight);
         ctx.fillStyle = '#4caf50';
         ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+    }
+
+    darkenColor(hex, amount) {
+        let r = parseInt(hex.slice(1, 3), 16);
+        let g = parseInt(hex.slice(3, 5), 16);
+        let b = parseInt(hex.slice(5, 7), 16);
+        r = Math.floor(r * (1 - amount));
+        g = Math.floor(g * (1 - amount));
+        b = Math.floor(b * (1 - amount));
+        return `rgb(${r},${g},${b})`;
     }
 }
 
@@ -104,6 +143,78 @@ class FastEnemy extends Enemy {
             type: 'fast'
         });
     }
+
+    draw(ctx, offsetX, offsetY) {
+        const screenX = this.x + offsetX;
+        const screenY = this.y + offsetY;
+        const r = this.size / 2;
+
+        // Attack animation
+        if (this.attackAnimTimer > 0) {
+            const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
+            const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
+            const dx = this.x - offsetX;
+            const dy = this.y - offsetY;
+            const baseAngle = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(baseAngle);
+            ctx.strokeStyle = '#ffcc80';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const ar = r + 3;
+            const startA = -Math.PI * 0.6;
+            const endA = startA + angle;
+            ctx.arc(0, 0, ar, startA, endA);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fast enemy - triangle shape
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY - r);
+        ctx.lineTo(screenX + r, screenY + r * 0.7);
+        ctx.lineTo(screenX - r, screenY + r * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#e65100';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(screenX - 3, screenY - 1, 2.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 3, screenY - 1, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#bf360c';
+        ctx.beginPath();
+        ctx.arc(screenX - 2, screenY, 1.2, 0, Math.PI * 2);
+        ctx.arc(screenX + 4, screenY, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size + 10;
+        const barHeight = 4;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - r - 10;
+        const healthPercent = this.health / this.maxHealth;
+
+        ctx.fillStyle = '#c62828';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+    }
 }
 
 class TankEnemy extends Enemy {
@@ -119,6 +230,82 @@ class TankEnemy extends Enemy {
             xpReward: 30,
             type: 'tank'
         });
+    }
+
+    draw(ctx, offsetX, offsetY) {
+        const screenX = this.x + offsetX;
+        const screenY = this.y + offsetY;
+        const r = this.size / 2;
+
+        // Attack animation
+        if (this.attackAnimTimer > 0) {
+            const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
+            const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
+            const dx = this.x - offsetX;
+            const dy = this.y - offsetY;
+            const baseAngle = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(baseAngle);
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            const ar = r + 4;
+            const startA = -Math.PI * 0.6;
+            const endA = startA + angle;
+            ctx.arc(0, 0, ar, startA, endA);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tank enemy - hexagon shape
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+            const px = screenX + Math.cos(a) * r;
+            const py = screenY + Math.sin(a) * r;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#4a148c';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(screenX - 5, screenY - 3, 4, 0, Math.PI * 2);
+        ctx.arc(screenX + 5, screenY - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#4a148c';
+        ctx.beginPath();
+        ctx.arc(screenX - 4, screenY - 2, 2, 0, Math.PI * 2);
+        ctx.arc(screenX + 6, screenY - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size + 10;
+        const barHeight = 4;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - r - 10;
+        const healthPercent = this.health / this.maxHealth;
+
+        ctx.fillStyle = '#c62828';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
     }
 }
 
@@ -151,5 +338,90 @@ class FlyingEnemy extends Enemy {
 
         if (this.attackTimer > 0) this.attackTimer -= 16;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
+    }
+
+    draw(ctx, offsetX, offsetY) {
+        const screenX = this.x + offsetX;
+        const screenY = this.y + offsetY;
+        const r = this.size / 2;
+
+        // Attack animation
+        if (this.attackAnimTimer > 0) {
+            const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
+            const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
+            const dx = this.x - offsetX;
+            const dy = this.y - offsetY;
+            const baseAngle = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(baseAngle);
+            ctx.strokeStyle = '#80deea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const ar = r + 3;
+            const startA = -Math.PI * 0.6;
+            const endA = startA + angle;
+            ctx.arc(0, 0, ar, startA, endA);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Flying enemy - star/diamond with wings
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wings
+        ctx.fillStyle = '#0097a7';
+        ctx.beginPath();
+        ctx.moveTo(screenX - r, screenY);
+        ctx.lineTo(screenX - r - 8, screenY - 6);
+        ctx.lineTo(screenX - r - 8, screenY + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(screenX + r, screenY);
+        ctx.lineTo(screenX + r + 8, screenY - 6);
+        ctx.lineTo(screenX + r + 8, screenY + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Body - circle
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#006064';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(screenX - 3, screenY - 2, 3, 0, Math.PI * 2);
+        ctx.arc(screenX + 3, screenY - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#004d40';
+        ctx.beginPath();
+        ctx.arc(screenX - 2, screenY - 1, 1.5, 0, Math.PI * 2);
+        ctx.arc(screenX + 4, screenY - 1, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size + 10;
+        const barHeight = 4;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - r - 10;
+        const healthPercent = this.health / this.maxHealth;
+
+        ctx.fillStyle = '#c62828';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
     }
 }
