@@ -66,6 +66,18 @@ class TileMap {
         return this.getTile(tileX, tileY) === TILE_WALL;
     }
 
+    findEmptyTile(centerTileX, centerTileY, radius) {
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const tx = centerTileX + Math.floor((Math.random() - 0.5) * radius * 2);
+            const ty = centerTileY + Math.floor((Math.random() - 0.5) * radius * 2);
+            if (!this.isWall(tx, ty)) {
+                return { x: tx * TILE_SIZE + TILE_SIZE / 2, y: ty * TILE_SIZE + TILE_SIZE / 2 };
+            }
+        }
+        // Fallback: return center of (0,0) tile
+        return { x: TILE_SIZE / 2, y: TILE_SIZE / 2 };
+    }
+
     draw(ctx, offsetX, offsetY) {
         const startX = Math.floor(-offsetX / TILE_SIZE) - 1;
         const startY = Math.floor(-offsetY / TILE_SIZE) - 1;

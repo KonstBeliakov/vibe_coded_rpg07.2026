@@ -13,7 +13,8 @@ class Game {
         this.gameOver = false;
 
         this.tileMap = new TileMap(42);
-        this.player = new Player(0, 0);
+        const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
+        this.player = new Player(spawnPos.x, spawnPos.y);
         this.enemies = [];
         this.arrows = [];
         this.chests = [];
@@ -204,8 +205,9 @@ class Game {
     restartGame() {
         this.gameOver = false;
         this.deathScreen.style.display = 'none';
-        this.player.x = 0;
-        this.player.y = 0;
+        const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
+        this.player.x = spawnPos.x;
+        this.player.y = spawnPos.y;
         this.player.health = 100;
         this.player.maxHealth = 100;
         this.playerLevel = 1;
@@ -261,6 +263,14 @@ class Game {
         } else {
             x = this.player.x - this.width / 2 - margin;
             y = this.player.y + (Math.random() - 0.5) * this.height;
+        }
+        // Ensure boss doesn't spawn in a wall
+        const bossTileX = Math.floor(x / TILE_SIZE);
+        const bossTileY = Math.floor(y / TILE_SIZE);
+        if (this.tileMap.isWall(bossTileX, bossTileY)) {
+            const emptyPos = this.tileMap.findEmptyTile(bossTileX, bossTileY, 3);
+            x = emptyPos.x;
+            y = emptyPos.y;
         }
         this.boss = new Boss(x, y, this.playerLevel);
         this.audio.playLevelUp();
