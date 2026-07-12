@@ -346,6 +346,32 @@ class Game {
 
         this.particles.draw(ctx, offsetX, offsetY);
 
+        // Draw player HP bar (top-left corner)
+        const hpBarWidth = 200;
+        const hpBarHeight = 20;
+        const hpX = 15;
+        const hpY = 50;
+        const hpPercent = this.player.health / this.player.maxHealth;
+
+        // Background
+        ctx.fillStyle = '#333';
+        ctx.fillRect(hpX, hpY, hpBarWidth, hpBarHeight);
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(hpX, hpY, hpBarWidth, hpBarHeight);
+
+        // HP fill
+        const hpColor = hpPercent > 0.5 ? '#4caf50' : hpPercent > 0.25 ? '#ff9800' : '#e53935';
+        ctx.fillStyle = hpColor;
+        ctx.fillRect(hpX + 1, hpY + 1, (hpBarWidth - 2) * hpPercent, hpBarHeight - 2);
+
+        // HP text
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, hpX + hpBarWidth / 2, hpY + 15);
+        ctx.textAlign = 'left';
+
         // Draw inventory
         const slotSize = 50;
         const slotMargin = 5;

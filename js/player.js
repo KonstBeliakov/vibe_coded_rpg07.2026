@@ -16,6 +16,9 @@ class Player {
         this.attackTimer = 0;
         this.attackAnimDuration = 200;
         this.attackAnimTimer = 0;
+        this.walkTimer = 0;
+        this.isMoving = false;
+        this.facingAngle = 0;
     }
 
     applyItemStats(item) {
@@ -35,9 +38,16 @@ class Player {
         if (keys['a'] || keys['A']) dx = -1;
         if (keys['d'] || keys['D']) dx = 1;
 
+        this.isMoving = (dx !== 0 || dy !== 0);
+
         if (dx !== 0 && dy !== 0) {
             dx *= 0.707;
             dy *= 0.707;
+        }
+
+        if (this.isMoving) {
+            this.facingAngle = Math.atan2(dy, dx);
+            this.walkTimer += 0.15;
         }
 
         this.x += dx * this.speed;
@@ -65,6 +75,7 @@ class Player {
 
             ctx.save();
             ctx.translate(screenX, screenY);
+            ctx.rotate(this.facingAngle);
             ctx.strokeStyle = '#81c784';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -76,19 +87,27 @@ class Player {
             ctx.restore();
         }
 
-        // Body - circle with details
+        // Walk animation - bobbing
+        const bobOffset = this.isMoving ? Math.sin(this.walkTimer) * 2 : 0;
+        const scaleX = this.isMoving ? 1 + Math.sin(this.walkTimer * 2) * 0.05 : 1;
+        const scaleY = this.isMoving ? 1 - Math.sin(this.walkTimer * 2) * 0.05 : 1;
+
         const r = this.size / 2;
+
+        ctx.save();
+        ctx.translate(screenX, screenY + bobOffset);
+        ctx.scale(scaleX, scaleY);
 
         // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
-        ctx.ellipse(screenX + 2, screenY + 2, r, r * 0.7, 0, 0, Math.PI * 2);
+        ctx.ellipse(2, 4, r, r * 0.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Main body
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.fill();
 
         // Border
@@ -99,14 +118,16 @@ class Player {
         // Eyes
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(screenX - 5, screenY - 3, 4, 0, Math.PI * 2);
-        ctx.arc(screenX + 5, screenY - 3, 4, 0, Math.PI * 2);
+        ctx.arc(-5, -3, 4, 0, Math.PI * 2);
+        ctx.arc(5, -3, 4, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#222';
         ctx.beginPath();
-        ctx.arc(screenX - 4, screenY - 2, 2, 0, Math.PI * 2);
-        ctx.arc(screenX + 6, screenY - 2, 2, 0, Math.PI * 2);
+        ctx.arc(-4, -2, 2, 0, Math.PI * 2);
+        ctx.arc(6, -2, 2, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
     }
 }
