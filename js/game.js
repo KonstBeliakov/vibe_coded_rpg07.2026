@@ -18,6 +18,8 @@ class Game {
         this.arrows = [];
         this.chests = [];
         this.potions = [];
+        this.boss = null;
+        this.bossLevelInterval = 5;
         this.mouseX = 0;
         this.mouseY = 0;
         this.spawnTimer = 0;
@@ -208,7 +210,34 @@ class Game {
             this.player.applyItemStats(this.slots[this.selectedSlot]);
             this.audio.playLevelUp();
             this.particles.emit(this.player.x, this.player.y, '#ffd700', 20, 5, 40, 5);
+
+            // Spawn boss every N levels
+            if (this.playerLevel % this.bossLevelInterval === 0 && !this.boss) {
+                this.spawnBoss();
+            }
         }
+    }
+
+    spawnBoss() {
+        const margin = 150;
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+        if (side === 0) {
+            x = this.player.x + (Math.random() - 0.5) * this.width;
+            y = this.player.y - this.height / 2 - margin;
+        } else if (side === 1) {
+            x = this.player.x + this.width / 2 + margin;
+            y = this.player.y + (Math.random() - 0.5) * this.height;
+        } else if (side === 2) {
+            x = this.player.x + (Math.random() - 0.5) * this.width;
+            y = this.player.y + this.height / 2 + margin;
+        } else {
+            x = this.player.x - this.width / 2 - margin;
+            y = this.player.y + (Math.random() - 0.5) * this.height;
+        }
+        this.boss = new Boss(x, y, this.playerLevel);
+        this.audio.playLevelUp();
+        this.particles.emit(x, y, '#ffd700', 30, 5, 50, 6);
     }
 
     spawnEnemy() {
@@ -301,6 +330,24 @@ class Game {
                     }
                 }
             }
+
+            // Attack boss with melee
+            if (this.boss) {
+                const dx = this.boss.x - px;
+                const dy = this.boss.y - py;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= range) {
+                    this.boss.health -= damage;
+                    this.audio.playHit();
+                    this.particles.emit(this.boss.x, this.boss.y, '#d500f9', 10, 3, 25, 4);
+                    if (this.boss.health <= 0) {
+                        this.addXP(this.boss.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(this.boss.x, this.boss.y, '#ffd700', 30, 5, 50, 6);
+                        this.boss = null;
+                    }
+                }
+            }
         }
     }
 
@@ -345,6 +392,17 @@ class Game {
             }
         }
 
+        // Update boss
+        if (this.boss) {
+            this.boss.update(this.player.x, this.player.y);
+            if (this.boss.tryAttack(this.player.x, this.player.y)) {
+                this.player.health -= this.boss.attackDamage;
+                this.audio.playPlayerHit();
+                this.particles.emit(this.player.x, this.player.y, '#d500f9', 15, 4, 30, 4);
+                if (this.player.health < 0) this.player.health = 0;
+            }
+        }
+
         for (let i = this.arrows.length - 1; i >= 0; i--) {
             const arrow = this.arrows[i];
             arrow.update();
@@ -367,6 +425,25 @@ class Game {
                     }
                     hit = true;
                     break;
+                }
+            }
+
+            // Check arrow hit on boss
+            if (!hit && this.boss) {
+                const dx = arrow.x - this.boss.x;
+                const dy = arrow.y - this.boss.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.boss.size / 2 + arrow.size) {
+                    this.boss.health -= arrow.damage;
+                    this.audio.playHit();
+                    this.particles.emit(this.boss.x, this.boss.y, '#d500f9', 10, 3, 25, 4);
+                    if (this.boss.health <= 0) {
+                        this.addXP(this.boss.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(this.boss.x, this.boss.y, '#ffd700', 30, 5, 50, 6);
+                        this.boss = null;
+                    }
+                    hit = true;
                 }
             }
 
@@ -431,6 +508,11 @@ class Game {
 
         for (const enemy of this.enemies) {
             enemy.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw boss
+        if (this.boss) {
+            this.boss.draw(ctx, offsetX, offsetY);
         }
 
         this.player.draw(ctx, offsetX, offsetY);
@@ -564,6 +646,18 @@ class Game {
                 const sx = mapX + (dx + viewRadius) * tileSize + 2;
                 const sy = mapY + (dy + viewRadius) * tileSize + 16;
                 ctx.fillRect(sx, sy, tileSize, tileSize);
+            }
+        }
+
+        // Draw boss on minimap
+        if (this.boss) {
+            ctx.fillStyle = '#d500f9';
+            const dx = Math.floor(this.boss.x / TILE_SIZE) - centerTileX;
+            const dy = Math.floor(this.boss.y / TILE_SIZE) - centerTileY;
+            if (Math.abs(dx) <= viewRadius && Math.abs(dy) <= viewRadius) {
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+                ctx.fillRect(sx - 1, sy - 1, tileSize + 2, tileSize + 2);
             }
         }
 
