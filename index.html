@@ -145,57 +145,73 @@
             }
         }
 
-        // ========== TileMap ==========
+        // ========== TileMap (Infinite) ==========
         const TILE_SIZE = 40;
         const TILE_EMPTY = 0;
         const TILE_WALL = 1;
+        const CHUNK_SIZE = 16;
 
         class TileMap {
-            constructor(width, height, seed) {
-                this.width = width;
-                this.height = height;
-                this.tiles = [];
+            constructor(seed) {
+                this.perlin = new PerlinNoise(seed);
+                this.scale = 0.08;
+                this.threshold = 0.15;
+                this.chunks = new Map();
+            }
 
-                const perlin = new PerlinNoise(seed);
-                const scale = 0.08;
-                const threshold = 0.15;
+            getChunkKey(cx, cy) {
+                return `${cx},${cy}`;
+            }
 
-                // Generate dungeon using Perlin noise
-                for (let y = 0; y < height; y++) {
-                    this.tiles[y] = [];
-                    for (let x = 0; x < width; x++) {
-                        // Use octave noise for cave-like generation
-                        const noiseVal = perlin.octaveNoise(x * scale, y * scale, 3, 0.5);
-                        // Walls where noise is above threshold
-                        this.tiles[y][x] = noiseVal > threshold ? TILE_WALL : TILE_EMPTY;
+            generateChunk(cx, cy) {
+                const key = this.getChunkKey(cx, cy);
+                if (this.chunks.has(key)) return;
+
+                const tiles = [];
+                for (let y = 0; y < CHUNK_SIZE; y++) {
+                    tiles[y] = [];
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        const wx = cx * CHUNK_SIZE + x;
+                        const wy = cy * CHUNK_SIZE + y;
+                        const noiseVal = this.perlin.octaveNoise(wx * this.scale, wy * this.scale, 3, 0.5);
+                        tiles[y][x] = noiseVal > this.threshold ? TILE_WALL : TILE_EMPTY;
                     }
                 }
 
-                // Ensure perimeter is walls
-                for (let x = 0; x < width; x++) {
-                    this.tiles[0][x] = TILE_WALL;
-                    this.tiles[height - 1][x] = TILE_WALL;
-                }
-                for (let y = 0; y < height; y++) {
-                    this.tiles[y][0] = TILE_WALL;
-                    this.tiles[y][width - 1] = TILE_WALL;
-                }
-
-                // Ensure player spawn area is clear (center of map)
-                const cx = Math.floor(width / 2);
-                const cy = Math.floor(height / 2);
-                for (let dy = -2; dy <= 2; dy++) {
-                    for (let dx = -2; dx <= 2; dx++) {
-                        this.tiles[cy + dy][cx + dx] = TILE_EMPTY;
+                // Ensure clear area around spawn (chunk 0,0 center)
+                if (cx === 0 && cy === 0) {
+                    const center = Math.floor(CHUNK_SIZE / 2);
+                    for (let dy = -2; dy <= 2; dy++) {
+                        for (let dx = -2; dx <= 2; dx++) {
+                            const ty = center + dy;
+                            const tx = center + dx;
+                            if (ty >= 0 && ty < CHUNK_SIZE && tx >= 0 && tx < CHUNK_SIZE) {
+                                tiles[ty][tx] = TILE_EMPTY;
+                            }
+                        }
                     }
                 }
+
+                this.chunks.set(key, tiles);
+            }
+
+            getTile(tileX, tileY) {
+                const cx = Math.floor(tileX / CHUNK_SIZE);
+                const cy = Math.floor(tileY / CHUNK_SIZE);
+                const key = this.getChunkKey(cx, cy);
+
+                if (!this.chunks.has(key)) {
+                    this.generateChunk(cx, cy);
+                }
+
+                const chunk = this.chunks.get(key);
+                const lx = ((tileX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                const ly = ((tileY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                return chunk[ly][lx];
             }
 
             isWall(tileX, tileY) {
-                if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
-                    return true;
-                }
-                return this.tiles[tileY][tileX] === TILE_WALL;
+                return this.getTile(tileX, tileY) === TILE_WALL;
             }
 
             draw(ctx, offsetX, offsetY) {
@@ -209,9 +225,7 @@
                         const screenX = x * TILE_SIZE + offsetX;
                         const screenY = y * TILE_SIZE + offsetY;
 
-                        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-                            ctx.fillStyle = '#000';
-                        } else if (this.tiles[y][x] === TILE_WALL) {
+                        if (this.isWall(x, y)) {
                             ctx.fillStyle = '#555';
                         } else {
                             ctx.fillStyle = '#2a2a2a';
@@ -511,12 +525,9 @@
                     this.keys[e.key] = false;
                 });
 
-                this.tileMap = new TileMap(20, 20);
-                // Place player in center of map
-                this.player = new Player(
-                    Math.floor(this.tileMap.width / 2) * TILE_SIZE + TILE_SIZE / 2,
-                    Math.floor(this.tileMap.height / 2) * TILE_SIZE + TILE_SIZE / 2
-                );
+                this.tileMap = new TileMap(42);
+                // Place player at origin (center of chunk 0,0)
+                this.player = new Player(0, 0);
                 this.enemies = [];
                 this.arrows = [];
                 this.mouseX = 0;
