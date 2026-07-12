@@ -285,22 +285,25 @@
             }
         }
 
-        // ========== Enemy ==========
+        // ========== Enemy Types ==========
+        // Base Enemy class
         class Enemy {
-            constructor(x, y) {
+            constructor(x, y, config) {
                 this.x = x;
                 this.y = y;
-                this.speed = 1.2;
-                this.size = 20;
-                this.color = '#e53935';
-                this.maxHealth = 50;
+                this.speed = config.speed || 1.2;
+                this.size = config.size || 20;
+                this.color = config.color || '#e53935';
+                this.maxHealth = config.health || 50;
                 this.health = this.maxHealth;
-                this.attackCooldown = 800; // ms
+                this.attackCooldown = config.attackCooldown || 800;
                 this.attackTimer = 0;
-                this.attackRange = 35; // меньше чем у игрока (50)
-                this.attackDamage = 8;
-                this.attackAnimDuration = 200; // ms
+                this.attackRange = config.attackRange || 35;
+                this.attackDamage = config.attackDamage || 8;
+                this.attackAnimDuration = config.attackAnimDuration || 200;
                 this.attackAnimTimer = 0;
+                this.xpReward = config.xpReward || 10;
+                this.type = config.type || 'normal';
             }
 
             update(playerX, playerY) {
@@ -312,13 +315,8 @@
                     this.y += (dy / dist) * this.speed;
                 }
 
-                // Update attack cooldown
-                if (this.attackTimer > 0) {
-                    this.attackTimer -= 16;
-                }
-                if (this.attackAnimTimer > 0) {
-                    this.attackAnimTimer -= 16;
-                }
+                if (this.attackTimer > 0) this.attackTimer -= 16;
+                if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
             }
 
             tryAttack(playerX, playerY) {
@@ -342,14 +340,13 @@
                 if (this.attackAnimTimer > 0) {
                     const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
                     const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
-                    const dx = this.x - offsetX; // approximate facing toward player
+                    const dx = this.x - offsetX;
                     const dy = this.y - offsetY;
                     const baseAngle = Math.atan2(dy, dx);
 
                     ctx.save();
                     ctx.translate(screenX, screenY);
                     ctx.rotate(baseAngle);
-
                     ctx.strokeStyle = '#ff8a80';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -358,7 +355,6 @@
                     const endA = startA + angle;
                     ctx.arc(0, 0, r, startA, endA);
                     ctx.stroke();
-
                     ctx.restore();
                 }
 
@@ -378,13 +374,80 @@
                 const barY = screenY - this.size / 2 - 10;
                 const healthPercent = this.health / this.maxHealth;
 
-                // Background (red)
                 ctx.fillStyle = '#c62828';
                 ctx.fillRect(barX, barY, barWidth, barHeight);
-
-                // Health (green)
                 ctx.fillStyle = '#4caf50';
                 ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+            }
+        }
+
+        // Fast enemy type
+        class FastEnemy extends Enemy {
+            constructor(x, y) {
+                super(x, y, {
+                    speed: 2.5,
+                    size: 16,
+                    color: '#ff9800',
+                    health: 30,
+                    attackCooldown: 600,
+                    attackRange: 30,
+                    attackDamage: 5,
+                    xpReward: 15,
+                    type: 'fast'
+                });
+            }
+        }
+
+        // Tank enemy type
+        class TankEnemy extends Enemy {
+            constructor(x, y) {
+                super(x, y, {
+                    speed: 0.7,
+                    size: 28,
+                    color: '#7b1fa2',
+                    health: 150,
+                    attackCooldown: 1200,
+                    attackRange: 40,
+                    attackDamage: 15,
+                    xpReward: 30,
+                    type: 'tank'
+                });
+            }
+        }
+
+        // Flying enemy type (moves in sine wave pattern)
+        class FlyingEnemy extends Enemy {
+            constructor(x, y) {
+                super(x, y, {
+                    speed: 1.8,
+                    size: 18,
+                    color: '#00bcd4',
+                    health: 40,
+                    attackCooldown: 1000,
+                    attackRange: 50,
+                    attackDamage: 7,
+                    xpReward: 20,
+                    type: 'flying'
+                });
+                this.waveOffset = Math.random() * Math.PI * 2;
+                this.baseY = y;
+            }
+
+            update(playerX, playerY) {
+                this.waveOffset += 0.05;
+                // Move toward player but with sine wave on perpendicular axis
+                const dx = playerX - this.x;
+                const dy = playerY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    // Move toward player
+                    this.x += (dx / dist) * this.speed;
+                    // Sine wave perpendicular movement
+                    this.y += (dy / dist) * this.speed + Math.sin(this.waveOffset) * 1.5;
+                }
+
+                if (this.attackTimer > 0) this.attackTimer -= 16;
+                if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
             }
         }
 
@@ -534,6 +597,9 @@
                 this.mouseY = 0;
                 this.spawnTimer = 0;
                 this.spawnInterval = 2000; // ms
+                this.playerXP = 0;
+                this.playerLevel = 1;
+                this.xpToNextLevel = 50;
 
                 // Mouse tracking
                 window.addEventListener('mousemove', (e) => {
@@ -635,10 +701,26 @@
                         if (dist <= range) {
                             enemy.health -= damage;
                             if (enemy.health <= 0) {
+                                this.addXP(enemy.xpReward);
                                 this.enemies.splice(i, 1);
                             }
                         }
                     }
+                }
+            }
+
+            addXP(amount) {
+                this.playerXP += amount;
+                while (this.playerXP >= this.xpToNextLevel) {
+                    this.playerXP -= this.xpToNextLevel;
+                    this.playerLevel++;
+                    this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
+                    // Level up bonuses
+                    this.player.maxHealth += 20;
+                    this.player.health = Math.min(this.player.health + 20, this.player.maxHealth);
+                    this.player.baseAttackDamage += 3;
+                    this.player.baseAttackRange += 2;
+                    this.player.applyItemStats(this.slots[this.selectedSlot]);
                 }
             }
 
@@ -659,7 +741,26 @@
                     x = this.player.x - this.width / 2 - margin;
                     y = this.player.y + (Math.random() - 0.5) * this.height;
                 }
-                this.enemies.push(new Enemy(x, y));
+
+                // Random enemy type based on level
+                const roll = Math.random();
+                let enemy;
+                if (roll < 0.5) {
+                    enemy = new Enemy(x, y, {
+                        speed: 1.2 + this.playerLevel * 0.05,
+                        health: 50 + this.playerLevel * 10,
+                        attackDamage: 8 + this.playerLevel * 2,
+                        xpReward: 10 + this.playerLevel * 2,
+                        type: 'normal'
+                    });
+                } else if (roll < 0.75) {
+                    enemy = new FastEnemy(x, y);
+                } else if (roll < 0.9) {
+                    enemy = new TankEnemy(x, y);
+                } else {
+                    enemy = new FlyingEnemy(x, y);
+                }
+                this.enemies.push(enemy);
             }
 
             update(dt) {
@@ -724,6 +825,7 @@
                         if (dist < enemy.size / 2 + arrow.size) {
                             enemy.health -= arrow.damage;
                             if (enemy.health <= 0) {
+                                this.addXP(enemy.xpReward);
                                 this.enemies.splice(j, 1);
                             }
                             hit = true;
@@ -764,8 +866,8 @@
 
                 this.player.draw(ctx, screenX, screenY);
 
-                // Update UI with coordinates
-                this.ui.textContent = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}`;
+                // Update UI with coordinates, level and XP
+                this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}`;
             }
 
             run() {
