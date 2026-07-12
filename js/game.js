@@ -21,6 +21,7 @@ class Game {
         this.potions = [];
         this.boss = null;
         this.bossLevelInterval = 5;
+        this.safeZoneRadius = TILE_SIZE * 5; // Safe zone radius around spawn (0,0)
         this.mouseX = 0;
         this.mouseY = 0;
         this.spawnTimer = 0;
@@ -277,6 +278,11 @@ class Game {
         this.particles.emit(x, y, '#ffd700', 30, 5, 50, 6);
     }
 
+    isInSafeZone(x, y) {
+        const dist = Math.sqrt(x * x + y * y);
+        return dist < this.safeZoneRadius;
+    }
+
     spawnEnemy() {
         // Limit enemies for performance
         if (this.enemies.length >= this.maxEnemies) return;
@@ -297,6 +303,9 @@ class Game {
             x = this.player.x - this.width / 2 - margin;
             y = this.player.y + (Math.random() - 0.5) * this.height;
         }
+
+        // Don't spawn enemies inside safe zone
+        if (this.isInSafeZone(x, y)) return;
 
         const roll = Math.random();
         let enemy;
@@ -423,6 +432,15 @@ class Game {
         }
 
         for (const enemy of this.enemies) {
+            // Push enemies out of safe zone
+            const enemyDistFromSpawn = Math.sqrt(enemy.x * enemy.x + enemy.y * enemy.y);
+            if (enemyDistFromSpawn < this.safeZoneRadius) {
+                const angle = Math.atan2(enemy.y, enemy.x);
+                const pushDist = this.safeZoneRadius - enemyDistFromSpawn + 5;
+                enemy.x += Math.cos(angle) * pushDist;
+                enemy.y += Math.sin(angle) * pushDist;
+            }
+
             enemy.update(this.player.x, this.player.y);
             if (enemy.tryAttack(this.player.x, this.player.y)) {
                 this.player.health -= enemy.attackDamage;
@@ -531,6 +549,21 @@ class Game {
         ctx.fillRect(0, 0, this.width, this.height);
 
         this.tileMap.draw(ctx, offsetX, offsetY);
+
+        // Draw safe zone
+        ctx.save();
+        ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(offsetX, offsetY, this.safeZoneRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.05)';
+        ctx.beginPath();
+        ctx.arc(offsetX, offsetY, this.safeZoneRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         // Draw chests
         for (const chest of this.chests) {
