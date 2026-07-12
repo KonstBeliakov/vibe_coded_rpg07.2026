@@ -30,8 +30,11 @@ class Game {
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
 
+        this.settings = new Settings();
         this.particles = new ParticleSystem();
         this.audio = new AudioSystem();
+        this.maxEnemies = 20;
+        this.settingsOpen = false;
 
         // Inventory slots
         this.slots = new Array(8).fill(null);
@@ -48,15 +51,39 @@ class Game {
         // Restart button
         this.restartBtn.addEventListener('click', () => this.restartGame());
 
+        // Settings UI
+        this.settingsBtn = document.getElementById('settingsBtn');
+        this.settingsScreen = document.getElementById('settingsScreen');
+        this.settingsContent = document.getElementById('settingsContent');
+        this.settingsCloseBtn = document.getElementById('settingsCloseBtn');
+
+        this.settingsBtn.addEventListener('click', () => this.openSettings());
+        this.settingsCloseBtn.addEventListener('click', () => this.closeSettings());
+
         // Input handling
         window.addEventListener('keydown', (e) => {
             if (this.gameOver) return;
+            if (this.settingsOpen) {
+                // Handle key rebinding
+                if (this.rebindingAction) {
+                    e.preventDefault();
+                    this.settings.bindKey(this.rebindingAction, e.key);
+                    this.rebindingAction = null;
+                    this.renderSettings();
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    this.closeSettings();
+                    return;
+                }
+                return;
+            }
             this.keys[e.key] = true;
-            if (e.key === ' ') {
+            if (e.key === this.settings.getKey('attack')) {
                 e.preventDefault();
                 this.playerAttack();
             }
-            if (e.key === 'e' || e.key === 'E') {
+            if (e.key === this.settings.getKey('interact')) {
                 this.interact();
             }
             const num = parseInt(e.key);
@@ -241,6 +268,9 @@ class Game {
     }
 
     spawnEnemy() {
+        // Limit enemies for performance
+        if (this.enemies.length >= this.maxEnemies) return;
+
         const margin = 100;
         const side = Math.floor(Math.random() * 4);
         let x, y;
@@ -680,6 +710,60 @@ class Game {
         const psx = mapX + (playerDX + viewRadius) * tileSize + 2;
         const psy = mapY + (playerDY + viewRadius) * tileSize + 16;
         ctx.fillRect(psx - 1, psy - 1, tileSize + 2, tileSize + 2);
+    }
+
+    openSettings() {
+        this.settingsOpen = true;
+        this.settingsScreen.style.display = 'flex';
+        this.renderSettings();
+    }
+
+    closeSettings() {
+        this.settingsOpen = false;
+        this.settingsScreen.style.display = 'none';
+        this.rebindingAction = null;
+    }
+
+    renderSettings() {
+        const actions = [
+            { action: 'up', label: 'Вверх' },
+            { action: 'down', label: 'Вниз' },
+            { action: 'left', label: 'Влево' },
+            { action: 'right', label: 'Вправо' },
+            { action: 'attack', label: 'Атака' },
+            { action: 'interact', label: 'Взаимодействие (E)' }
+        ];
+
+        this.settingsContent.innerHTML = '';
+        for (const { action, label } of actions) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:4px;';
+
+            const labelEl = document.createElement('span');
+            labelEl.textContent = label;
+            labelEl.style.cssText = 'color:#ccc; font-size:14px;';
+
+            const keyEl = document.createElement('button');
+            const keyName = this.settings.getKey(action);
+            keyEl.textContent = keyName === ' ' ? 'Пробел' : keyName.toUpperCase();
+            keyEl.style.cssText = 'padding:4px 12px; background:#444; color:#fff; border:1px solid #666; border-radius:3px; cursor:pointer; font-family:monospace; font-size:13px; min-width:80px; text-align:center;';
+
+            keyEl.addEventListener('click', () => {
+                this.rebindingAction = action;
+                keyEl.textContent = '...';
+                keyEl.style.background = '#666';
+                setTimeout(() => {
+                    if (this.rebindingAction === action) {
+                        keyEl.textContent = keyName === ' ' ? 'Пробел' : keyName.toUpperCase();
+                        keyEl.style.background = '#444';
+                    }
+                }, 3000);
+            });
+
+            row.appendChild(labelEl);
+            row.appendChild(keyEl);
+            this.settingsContent.appendChild(row);
+        }
     }
 
     gameLoop(time) {
