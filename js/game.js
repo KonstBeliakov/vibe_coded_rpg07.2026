@@ -210,18 +210,34 @@ class Game {
         const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
         this.player.x = spawnPos.x;
         this.player.y = spawnPos.y;
-        this.player.health = 100;
-        this.player.maxHealth = 100;
-        this.playerLevel = 1;
-        this.playerXP = 0;
-        this.xpToNextLevel = 50;
-        this.player.baseAttackDamage = 15;
-        this.player.baseAttackRange = 50;
+
+        // Keep level and XP on death
+        const keptLevel = this.playerLevel;
+        const keptXP = this.playerXP;
+        const keptXpToNext = this.xpToNextLevel;
+
+        // Reset health based on kept level
+        this.player.maxHealth = 100 + (keptLevel - 1) * 20;
+        this.player.health = this.player.maxHealth;
+        this.player.baseAttackDamage = 15 + (keptLevel - 1) * 3;
+        this.player.baseAttackRange = 50 + (keptLevel - 1) * 2;
+
+        // Reset inventory to starter items only
+        this.slots = new Array(8).fill(null);
+        this.slots[0] = new Item('Меч', 10, 10, 'no_texture.png');
+        this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
+        this.selectedSlot = 0;
         this.player.applyItemStats(this.slots[this.selectedSlot]);
+
+        this.playerLevel = keptLevel;
+        this.playerXP = keptXP;
+        this.xpToNextLevel = keptXpToNext;
+
         this.enemies = [];
         this.arrows = [];
         this.chests = [];
         this.potions = [];
+        this.boss = null;
         this.particles = new ParticleSystem();
         this.spawnTimer = 0;
         this.tileMap = new TileMap(42);
