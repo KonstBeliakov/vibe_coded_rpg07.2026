@@ -4,9 +4,13 @@ class Game {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         this.ui = document.getElementById(uiId);
+        this.deathScreen = document.getElementById('deathScreen');
+        this.deathStats = document.getElementById('deathStats');
+        this.restartBtn = document.getElementById('restartBtn');
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         this.keys = {};
+        this.gameOver = false;
 
         this.tileMap = new TileMap(42);
         this.player = new Player(0, 0);
@@ -32,8 +36,15 @@ class Game {
         this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
         this.player.applyItemStats(this.slots[this.selectedSlot]);
 
+        // Load saved game
+        this.loadGame();
+
+        // Restart button
+        this.restartBtn.addEventListener('click', () => this.restartGame());
+
         // Input handling
         window.addEventListener('keydown', (e) => {
+            if (this.gameOver) return;
             this.keys[e.key] = true;
             if (e.key === ' ') {
                 e.preventDefault();
@@ -51,6 +62,7 @@ class Game {
         });
 
         window.addEventListener('wheel', (e) => {
+            if (this.gameOver) return;
             if (e.deltaY > 0) {
                 this.selectedSlot = (this.selectedSlot + 1) % 8;
             } else {
@@ -64,10 +76,74 @@ class Game {
             this.mouseY = e.clientY;
         });
 
+        // Auto-save every 10 seconds
+        setInterval(() => this.saveGame(), 10000);
+
         // Start game loop
         this.lastTime = performance.now();
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
+    }
+
+    saveGame() {
+        if (this.gameOver) return;
+        const data = {
+            x: this.player.x,
+            y: this.player.y,
+            health: this.player.health,
+            maxHealth: this.player.maxHealth,
+            level: this.playerLevel,
+            xp: this.playerXP,
+            xpToNext: this.xpToNextLevel,
+            baseDamage: this.player.baseAttackDamage,
+            baseRange: this.player.baseAttackRange
+        };
+        try {
+            localStorage.setItem('rpg3_save', JSON.stringify(data));
+        } catch (e) {
+            // ignore storage errors
+        }
+    }
+
+    loadGame() {
+        try {
+            const raw = localStorage.getItem('rpg3_save');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            this.player.x = data.x || 0;
+            this.player.y = data.y || 0;
+            this.player.health = data.health || 100;
+            this.player.maxHealth = data.maxHealth || 100;
+            this.playerLevel = data.level || 1;
+            this.playerXP = data.xp || 0;
+            this.xpToNextLevel = data.xpToNext || 50;
+            this.player.baseAttackDamage = data.baseDamage || 15;
+            this.player.baseAttackRange = data.baseRange || 50;
+            this.player.applyItemStats(this.slots[this.selectedSlot]);
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    restartGame() {
+        this.gameOver = false;
+        this.deathScreen.style.display = 'none';
+        this.player.x = 0;
+        this.player.y = 0;
+        this.player.health = 100;
+        this.player.maxHealth = 100;
+        this.playerLevel = 1;
+        this.playerXP = 0;
+        this.xpToNextLevel = 50;
+        this.player.baseAttackDamage = 15;
+        this.player.baseAttackRange = 50;
+        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.enemies = [];
+        this.arrows = [];
+        this.particles = new ParticleSystem();
+        this.spawnTimer = 0;
+        this.tileMap = new TileMap(42);
+        localStorage.removeItem('rpg3_save');
     }
 
     addXP(amount) {
@@ -161,6 +237,8 @@ class Game {
     }
 
     update(dt) {
+        if (this.gameOver) return;
+
         const prevX = this.player.x;
         const prevY = this.player.y;
 
@@ -235,6 +313,14 @@ class Game {
         if (this.spawnTimer >= this.spawnInterval) {
             this.spawnTimer = 0;
             this.spawnEnemy();
+        }
+
+        // Check death
+        if (this.player.health <= 0) {
+            this.gameOver = true;
+            this.deathScreen.style.display = 'flex';
+            this.deathStats.textContent = `Уровень: ${this.playerLevel} | XP: ${this.playerXP} | Убито врагов: ~`;
+            localStorage.removeItem('rpg3_save');
         }
     }
 
