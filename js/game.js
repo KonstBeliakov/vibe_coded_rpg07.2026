@@ -26,6 +26,7 @@ class Game {
         this.mouseY = 0;
         this.spawnTimer = 0;
         this.spawnInterval = 2000;
+        this.baseSpawnInterval = 2000;
         this.chestSpawnTimer = 0;
         this.chestSpawnInterval = 15000;
         this.playerXP = 0;
@@ -278,6 +279,12 @@ class Game {
         this.particles.emit(x, y, '#ffd700', 30, 5, 50, 6);
     }
 
+    getDifficultyMultiplier() {
+        const dist = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
+        // 1.0 at spawn, increases by ~0.1 per 500 pixels
+        return 1.0 + dist / 5000;
+    }
+
     isInSafeZone(x, y) {
         const dist = Math.sqrt(x * x + y * y);
         return dist < this.safeZoneRadius;
@@ -286,6 +293,8 @@ class Game {
     spawnEnemy() {
         // Limit enemies for performance
         if (this.enemies.length >= this.maxEnemies) return;
+
+        const diffMult = this.getDifficultyMultiplier();
 
         const margin = 100;
         const side = Math.floor(Math.random() * 4);
@@ -311,18 +320,30 @@ class Game {
         let enemy;
         if (roll < 0.5) {
             enemy = new Enemy(x, y, {
-                speed: 1.2 + this.playerLevel * 0.05,
-                health: 50 + this.playerLevel * 10,
-                attackDamage: 8 + this.playerLevel * 2,
-                xpReward: 10 + this.playerLevel * 2,
+                speed: (1.2 + this.playerLevel * 0.05) * diffMult,
+                health: (50 + this.playerLevel * 10) * diffMult,
+                attackDamage: (8 + this.playerLevel * 2) * diffMult,
+                xpReward: Math.floor((10 + this.playerLevel * 2) * diffMult),
                 type: 'normal'
             });
         } else if (roll < 0.75) {
             enemy = new FastEnemy(x, y);
+            enemy.speed *= diffMult;
+            enemy.health *= diffMult;
+            enemy.attackDamage *= diffMult;
+            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
         } else if (roll < 0.9) {
             enemy = new TankEnemy(x, y);
+            enemy.speed *= diffMult;
+            enemy.health *= diffMult;
+            enemy.attackDamage *= diffMult;
+            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
         } else {
             enemy = new FlyingEnemy(x, y);
+            enemy.speed *= diffMult;
+            enemy.health *= diffMult;
+            enemy.attackDamage *= diffMult;
+            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
         }
         this.enemies.push(enemy);
     }
@@ -516,6 +537,10 @@ class Game {
         }
 
         this.particles.update();
+
+        // Adjust spawn interval based on distance from spawn
+        const diffMult = this.getDifficultyMultiplier();
+        this.spawnInterval = Math.max(500, this.baseSpawnInterval / diffMult);
 
         this.spawnTimer += dt;
         if (this.spawnTimer >= this.spawnInterval) {
