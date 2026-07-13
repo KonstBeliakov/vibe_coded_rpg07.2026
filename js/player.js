@@ -68,7 +68,7 @@ class Player {
         const screenX = this.x + offsetX;
         const screenY = this.y + offsetY;
 
-        // Attack animation - sword slash arc
+        // Attack animation - sword slash arc with glow
         if (this.attackAnimTimer > 0) {
             const progress = 1 - this.attackAnimTimer / this.attackAnimDuration;
             const angle = progress * Math.PI * 1.5 - Math.PI * 0.75;
@@ -76,14 +76,33 @@ class Player {
             ctx.save();
             ctx.translate(screenX, screenY);
             ctx.rotate(this.facingAngle);
-            ctx.strokeStyle = '#81c784';
-            ctx.lineWidth = 3;
+
+            // Glow effect
+            const alpha = Math.min(1, progress * 2) * (1 - progress);
+            ctx.strokeStyle = `rgba(129, 199, 132, ${alpha * 0.3})`;
+            ctx.lineWidth = 8;
             ctx.beginPath();
             const r = this.size / 2 + 5;
             const startA = -Math.PI * 0.6;
             const endA = startA + angle;
             ctx.arc(0, 0, r, startA, endA);
             ctx.stroke();
+
+            // Main slash
+            ctx.strokeStyle = `rgba(200, 255, 200, ${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, r, startA, endA);
+            ctx.stroke();
+
+            // Tip spark
+            const tipX = Math.cos(startA + angle) * r;
+            const tipY = Math.sin(startA + angle) * r;
+            ctx.fillStyle = `rgba(255, 255, 200, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(tipX, tipY, 3 + alpha * 3, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.restore();
         }
 

@@ -14,9 +14,16 @@ class Arrow {
         this.arrowType = arrowType;
     }
 
-    update() {
+    update(game) {
         this.x += this.vx;
         this.y += this.vy;
+
+        // Trail particles for special arrows
+        if (this.arrowType !== 'normal' && game) {
+            const trailColor = this.arrowType === 'fire' ? '#ff6d00' :
+                               this.arrowType === 'ice' ? '#00bcd4' : '#76ff03';
+            game.particles.emit(this.x, this.y, trailColor, 2, 1, 8, 1);
+        }
     }
 
     getShaftColor() {

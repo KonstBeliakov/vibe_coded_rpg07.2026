@@ -613,7 +613,7 @@ class Game {
 
         for (let i = this.arrows.length - 1; i >= 0; i--) {
             const arrow = this.arrows[i];
-            arrow.update();
+            arrow.update(this);
 
             let hit = false;
             for (let j = this.enemies.length - 1; j >= 0; j--) {
