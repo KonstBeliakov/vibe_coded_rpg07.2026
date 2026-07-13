@@ -44,6 +44,7 @@ class Game {
         this.settingsOpen = false;
         this.chestUIOpen = false;
         this.activeChest = null;
+        this.achievements = new AchievementSystem();
 
         // Fog of War
         this.exploredTiles = new Set();
@@ -166,6 +167,7 @@ class Game {
             if (dist <= chest.interactRange) {
                 const loot = chest.open();
                 if (loot) {
+                    this.achievements.addChestOpen();
                     this.audio.playHit();
                     this.particles.emit(chest.x, chest.y, '#ffd700', 10, 3, 25, 4);
                     for (const item of loot) {
@@ -493,6 +495,7 @@ class Game {
                     this.particles.emit(enemy.x, enemy.y, '#ff5252', 8, 3, 20, 3);
                     if (enemy.health <= 0) {
                         this.addXP(enemy.xpReward);
+                        this.achievements.addKill();
                         this.audio.playEnemyDeath();
                         this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
                         this.enemies.splice(i, 1);
@@ -617,6 +620,7 @@ class Game {
                     this.particles.emit(this.boss.x, this.boss.y, '#d500f9', 10, 3, 25, 4);
                     if (this.boss.health <= 0) {
                         this.addXP(this.boss.xpReward);
+                        this.achievements.addBossKill();
                         this.audio.playEnemyDeath();
                         this.particles.emit(this.boss.x, this.boss.y, '#ffd700', 30, 5, 50, 6);
                         this.boss = null;
@@ -704,6 +708,11 @@ class Game {
                 this.spawnChest();
             }
         }
+
+        // Update achievements
+        this.achievements.addLevel(this.playerLevel);
+        const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
+        this.achievements.updateDistance(distFromSpawn);
 
         // Update fog of war
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
@@ -865,6 +874,9 @@ class Game {
 
         // Draw minimap
         this.drawMinimap(ctx);
+
+        // Draw achievement notifications
+        this.achievements.drawNotification(ctx);
 
         // UI text
         this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}`;
