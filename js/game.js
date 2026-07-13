@@ -635,7 +635,7 @@ class Game {
                 enemy.y += Math.sin(angle) * pushDist;
             }
 
-            enemy.update(this.player.x, this.player.y);
+            enemy.update(this.player.x, this.player.y, this.tileMap);
             if (enemy.tryAttack(this.player.x, this.player.y)) {
                 this.player.health -= enemy.attackDamage;
                 this.damageFlashTimer = this.damageFlashDuration;

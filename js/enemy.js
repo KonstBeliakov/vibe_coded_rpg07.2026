@@ -18,17 +18,81 @@ class Enemy {
         this.type = config.type || 'normal';
     }
 
-    update(playerX, playerY) {
-        const dx = playerX - this.x;
-        const dy = playerY - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 0) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
+    update(playerX, playerY, tileMap) {
+        // Use A* pathfinding to avoid walls
+        const playerTileX = Math.floor(playerX / TILE_SIZE);
+        const playerTileY = Math.floor(playerY / TILE_SIZE);
+        const myTileX = Math.floor(this.x / TILE_SIZE);
+        const myTileY = Math.floor(this.y / TILE_SIZE);
+
+        // Check if there's a direct line of sight (no walls between)
+        const hasDirectPath = this.hasLineOfSight(playerX, playerY, tileMap);
+
+        if (!hasDirectPath && tileMap) {
+            // Use A* pathfinding
+            if (!this.path || this.path.length === 0 ||
+                Math.floor(this.path[this.path.length - 1].x / TILE_SIZE) !== playerTileX ||
+                Math.floor(this.path[this.path.length - 1].y / TILE_SIZE) !== playerTileY) {
+                // Recalculate path every 30 frames or when target moves
+                if (!this.pathTimer || this.pathTimer <= 0 || this.path.length === 0) {
+                    this.path = aStar(this.x, this.y, playerX, playerY, tileMap);
+                    this.pathTimer = 30;
+                }
+            }
+
+            if (this.path && this.path.length > 1) {
+                // Follow path
+                const nextNode = this.path[0];
+                const dx = nextNode.x - this.x;
+                const dy = nextNode.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.speed) {
+                    this.path.shift();
+                } else if (dist > 0) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            } else {
+                // Fallback: move directly towards player
+                const dx = playerX - this.x;
+                const dy = playerY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            }
+        } else {
+            // Direct path - move straight towards player
+            const dx = playerX - this.x;
+            const dy = playerY - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 0) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
         }
 
+        if (this.pathTimer > 0) this.pathTimer--;
         if (this.attackTimer > 0) this.attackTimer -= 16;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
+    }
+
+    hasLineOfSight(targetX, targetY, tileMap) {
+        if (!tileMap) return true;
+        const dx = targetX - this.x;
+        const dy = targetY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.ceil(dist / (TILE_SIZE / 2));
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const checkX = this.x + dx * t;
+            const checkY = this.y + dy * t;
+            const tileX = Math.floor(checkX / TILE_SIZE);
+            const tileY = Math.floor(checkY / TILE_SIZE);
+            if (tileMap.isWall(tileX, tileY)) return false;
+        }
+        return true;
     }
 
     tryAttack(playerX, playerY) {
