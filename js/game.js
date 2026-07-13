@@ -23,6 +23,7 @@ class Game {
         this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
+        this.bossAreas = [];
         this.safeZoneRadius = TILE_SIZE * 5; // Safe zone radius around spawn (0,0)
         this.spawnBedX = spawnPos.x;
         this.spawnBedY = spawnPos.y;
@@ -374,9 +375,43 @@ class Game {
             this.audio.playLevelUp();
             this.particles.emit(this.player.x, this.player.y, '#ffd700', 20, 5, 40, 5);
 
-            // Spawn boss every N levels
-            if (this.playerLevel % this.bossLevelInterval === 0 && !this.boss) {
-                this.spawnBoss();
+            // Spawn boss area every N levels
+            if (this.playerLevel % this.bossLevelInterval === 0) {
+                this.spawnBossArea();
+            }
+        }
+    }
+
+    spawnBossArea() {
+        // Find a location far from the player for the boss area
+        const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
+        const minDist = Math.max(300, distFromSpawn + 200);
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = minDist + Math.random() * 200;
+            const bx = Math.cos(angle) * radius;
+            const by = Math.sin(angle) * radius;
+            const tileX = Math.floor(bx / TILE_SIZE);
+            const tileY = Math.floor(by / TILE_SIZE);
+
+            if (!this.tileMap.isWall(tileX, tileY)) {
+                // Check not too close to existing boss areas
+                let tooClose = false;
+                for (const area of this.bossAreas) {
+                    const dx = area.x - bx;
+                    const dy = area.y - by;
+                    if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 8) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (!tooClose) {
+                    const cx = tileX * TILE_SIZE + TILE_SIZE / 2;
+                    const cy = tileY * TILE_SIZE + TILE_SIZE / 2;
+                    this.bossAreas.push(new BossArea(cx, cy, this.playerLevel));
+                    return;
+                }
             }
         }
     }
@@ -645,6 +680,14 @@ class Game {
             }
         }
 
+        // Update boss areas
+        for (const area of this.bossAreas) {
+            if (!area.activated && area.isPlayerInside(this.player.x, this.player.y)) {
+                area.activate(this);
+            }
+            area.update(this);
+        }
+
         // Update boss
         if (this.boss) {
             this.boss.update(this.player.x, this.player.y);
@@ -895,6 +938,11 @@ class Game {
 
         for (const enemy of this.enemies) {
             enemy.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw boss areas
+        for (const area of this.bossAreas) {
+            area.draw(ctx, offsetX, offsetY);
         }
 
         // Draw boss
