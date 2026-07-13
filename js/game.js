@@ -41,6 +41,8 @@ class Game {
         this.audio = new AudioSystem();
         this.maxEnemies = 20;
         this.settingsOpen = false;
+        this.chestUIOpen = false;
+        this.activeChest = null;
 
         // Inventory slots
         this.slots = new Array(8).fill(null);
@@ -54,6 +56,10 @@ class Game {
         // Create bed in safe zone
         const bedPos = this.tileMap.findEmptyTile(0, 0, 3);
         this.beds.push(new Bed(bedPos.x, bedPos.y));
+
+        // Create storage chest in safe zone
+        const storageChestPos = this.tileMap.findEmptyTile(0, 0, 4);
+        this.chests.push(new Chest(storageChestPos.x, storageChestPos.y, true));
 
         // Load saved game
         this.loadGame();
@@ -96,6 +102,11 @@ class Game {
             if (e.key === this.settings.getKey('interact')) {
                 this.interact();
             }
+            if (e.key === 'q' || e.key === 'Q') {
+                if (this.chestUIOpen) {
+                    this.depositItem();
+                }
+            }
             const num = parseInt(e.key);
             if (num >= 1 && num <= 8) {
                 this.selectedSlot = num - 1;
@@ -135,6 +146,12 @@ class Game {
         const px = this.player.x;
         const py = this.player.y;
 
+        // If chest UI is open, close it
+        if (this.chestUIOpen) {
+            this.closeChestUI();
+            return;
+        }
+
         // Check chests
         for (const chest of this.chests) {
             if (chest.opened) continue;
@@ -152,6 +169,10 @@ class Game {
                             this.potions.push(new Potion(chest.x + (Math.random() - 0.5) * 20, chest.y + (Math.random() - 0.5) * 20, type));
                         }
                     }
+                }
+                // Open storage chest UI
+                if (chest.isStorage) {
+                    this.openChestUI(chest);
                 }
                 break;
             }
@@ -896,6 +917,77 @@ class Game {
             row.appendChild(labelEl);
             row.appendChild(keyEl);
             this.settingsContent.appendChild(row);
+        }
+    }
+
+    openChestUI(chest) {
+        this.chestUIOpen = true;
+        this.activeChest = chest;
+        document.getElementById('chestUI').style.display = 'block';
+        this.renderChestUI();
+    }
+
+    closeChestUI() {
+        this.chestUIOpen = false;
+        this.activeChest = null;
+        document.getElementById('chestUI').style.display = 'none';
+    }
+
+    renderChestUI() {
+        if (!this.activeChest) return;
+        const container = document.getElementById('chestItems');
+        container.innerHTML = '';
+
+        // Show stored items
+        for (let i = 0; i < this.activeChest.storedItems.length; i++) {
+            const item = this.activeChest.storedItems[i];
+            const el = document.createElement('div');
+            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #666; border-radius:3px; cursor:pointer; font-size:11px;';
+            el.textContent = item.name;
+            el.title = 'Нажми чтобы забрать';
+            el.addEventListener('click', () => this.withdrawItem(i));
+            container.appendChild(el);
+        }
+
+        if (this.activeChest.storedItems.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
+            empty.textContent = 'Сундук пуст';
+            container.appendChild(empty);
+        }
+
+        document.getElementById('chestSelectedSlot').textContent = this.selectedSlot + 1;
+    }
+
+    depositItem() {
+        if (!this.activeChest) return;
+        const item = this.slots[this.selectedSlot];
+        if (!item) return;
+        // Don't allow depositing starter items
+        if (this.selectedSlot === 0 && item.name === 'Меч') return;
+        if (this.selectedSlot === 1 && item.name === 'Лук') return;
+
+        this.activeChest.addItem(item);
+        this.slots[this.selectedSlot] = null;
+        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.renderChestUI();
+        this.audio.playHit();
+    }
+
+    withdrawItem(index) {
+        if (!this.activeChest) return;
+        const item = this.activeChest.removeItem(index);
+        if (!item) return;
+
+        // Find first empty slot
+        for (let i = 0; i < this.slots.length; i++) {
+            if (!this.slots[i]) {
+                this.slots[i] = item;
+                this.player.applyItemStats(this.slots[this.selectedSlot]);
+                this.renderChestUI();
+                this.audio.playLevelUp();
+                return;
+            }
         }
     }
 

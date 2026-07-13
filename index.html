@@ -46,6 +46,16 @@
         <p id="deathStats" style="font-size:18px; margin-bottom:30px;"></p>
         <button id="restartBtn" style="padding:12px 30px; font-size:20px; background:#4caf50; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:monospace;">Начать заново</button>
     </div>
+    <div id="chestUI" style="display:none; position:absolute; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); border:1px solid #555; border-radius:6px; padding:10px; color:#fff; font-family:monospace; min-width:300px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:#ffd54f;">Сундук</span>
+            <span style="color:#aaa; font-size:12px;">Нажми E чтобы закрыть</span>
+        </div>
+        <div id="chestItems" style="display:flex; flex-wrap:wrap; gap:4px; min-height:40px;"></div>
+        <div style="margin-top:6px; padding-top:6px; border-top:1px solid #444;">
+            <span style="color:#aaa; font-size:11px;">Выделенный слот: <span id="chestSelectedSlot">1</span> — нажми Q чтобы положить</span>
+        </div>
+    </div>
     <div id="settingsBtn" style="position:absolute; top:10px; right:10px; padding:6px 12px; background:rgba(0,0,0,0.6); color:#aaa; border:1px solid #555; border-radius:4px; cursor:pointer; font-family:monospace; font-size:14px;">⚙</div>
     <div id="settingsScreen" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:monospace;">
         <h2 style="margin-bottom:20px;">Настройки управления</h2>

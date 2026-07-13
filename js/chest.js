@@ -1,11 +1,13 @@
 // ========== Chest ==========
 class Chest {
-    constructor(x, y) {
+    constructor(x, y, isStorage = false) {
         this.x = x;
         this.y = y;
         this.size = 24;
         this.opened = false;
+        this.isStorage = isStorage; // Storage chests don't despawn
         this.loot = this.generateLoot();
+        this.storedItems = []; // For storage chests
         this.interactRange = 40;
     }
 
@@ -20,9 +22,20 @@ class Chest {
     }
 
     open() {
-        if (this.opened) return null;
+        if (this.opened && !this.isStorage) return null;
         this.opened = true;
         return this.loot;
+    }
+
+    addItem(item) {
+        this.storedItems.push(item);
+    }
+
+    removeItem(index) {
+        if (index >= 0 && index < this.storedItems.length) {
+            return this.storedItems.splice(index, 1)[0];
+        }
+        return null;
     }
 
     draw(ctx, offsetX, offsetY) {
@@ -61,6 +74,15 @@ class Chest {
             ctx.strokeStyle = '#3e2723';
             ctx.lineWidth = 1;
             ctx.strokeRect(screenX - s, screenY - s - 6, this.size, 6);
+
+            // Show stored items count
+            if (this.isStorage && this.storedItems.length > 0) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.storedItems.length, screenX, screenY + 4);
+                ctx.textAlign = 'left';
+            }
         }
     }
 }
