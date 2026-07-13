@@ -17,6 +17,7 @@ class Game {
         this.player = new Player(spawnPos.x, spawnPos.y);
         this.enemies = [];
         this.arrows = [];
+        this.staffProjectiles = [];
         this.chests = [];
         this.potions = [];
         this.beds = [];
@@ -454,7 +455,21 @@ class Game {
         const py = this.player.y;
 
         const selectedItem = this.slots[this.selectedSlot];
-        if (selectedItem && selectedItem.name === 'Лук') {
+        if (selectedItem && selectedItem.name.includes('Посох')) {
+            // Staff: shoot projectiles in multiple directions
+            const angles = [-0.5, -0.25, 0, 0.25, 0.5]; // 5 projectiles in a fan
+            const speed = 4;
+            const worldMouseX = px + (this.mouseX - this.width / 2);
+            const worldMouseY = py + (this.mouseY - this.height / 2);
+            const baseAngle = Math.atan2(worldMouseY - py, worldMouseX - px);
+            for (const offset of angles) {
+                const angle = baseAngle + offset;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                this.staffProjectiles.push(new StaffProjectile(px, py, vx, vy));
+            }
+            this.audio.playShoot();
+        } else if (selectedItem && selectedItem.name === 'Лук') {
             const worldMouseX = px + (this.mouseX - this.width / 2);
             const worldMouseY = py + (this.mouseY - this.height / 2);
             this.arrows.push(new Arrow(px, py, worldMouseX, worldMouseY));
@@ -611,6 +626,56 @@ class Game {
             }
         }
 
+        // Update staff projectiles
+        for (let i = this.staffProjectiles.length - 1; i >= 0; i--) {
+            const proj = this.staffProjectiles[i];
+            proj.update();
+
+            let hit = false;
+            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                const enemy = this.enemies[j];
+                const dx = proj.x - enemy.x;
+                const dy = proj.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < enemy.size / 2 + proj.size) {
+                    enemy.health -= proj.damage;
+                    this.audio.playHit();
+                    this.particles.emit(enemy.x, enemy.y, '#ce93d8', 8, 3, 20, 3);
+                    if (enemy.health <= 0) {
+                        this.addXP(enemy.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
+                        this.enemies.splice(j, 1);
+                    }
+                    hit = true;
+                    break;
+                }
+            }
+
+            // Check hit on boss
+            if (!hit && this.boss) {
+                const dx = proj.x - this.boss.x;
+                const dy = proj.y - this.boss.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.boss.size / 2 + proj.size) {
+                    this.boss.health -= proj.damage;
+                    this.audio.playHit();
+                    this.particles.emit(this.boss.x, this.boss.y, '#ce93d8', 10, 3, 25, 4);
+                    if (this.boss.health <= 0) {
+                        this.addXP(this.boss.xpReward);
+                        this.audio.playEnemyDeath();
+                        this.particles.emit(this.boss.x, this.boss.y, '#ffd700', 30, 5, 50, 6);
+                        this.boss = null;
+                    }
+                    hit = true;
+                }
+            }
+
+            if (hit) {
+                this.staffProjectiles.splice(i, 1);
+            }
+        }
+
         // Update potions
         for (const potion of this.potions) {
             potion.update();
@@ -687,6 +752,11 @@ class Game {
 
         for (const arrow of this.arrows) {
             arrow.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw staff projectiles
+        for (const proj of this.staffProjectiles) {
+            proj.draw(ctx, offsetX, offsetY);
         }
 
         for (const enemy of this.enemies) {

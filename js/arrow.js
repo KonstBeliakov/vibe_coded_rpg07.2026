@@ -56,3 +56,46 @@ class Arrow {
         ctx.restore();
     }
 }
+
+// ========== Staff Projectile ==========
+class StaffProjectile {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.size = 5;
+        this.damage = 8;
+        this.alive = true;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+
+    draw(ctx, offsetX, offsetY) {
+        const screenX = this.x + offsetX;
+        const screenY = this.y + offsetY;
+
+        ctx.save();
+        // Glow
+        ctx.fillStyle = 'rgba(156, 39, 176, 0.3)';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size + 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core
+        ctx.fillStyle = '#9c27b0';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner
+        ctx.fillStyle = '#ce93d8';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
