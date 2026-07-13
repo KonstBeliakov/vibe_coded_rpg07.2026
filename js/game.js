@@ -50,6 +50,7 @@ class Game {
         this.effects = new EffectManager();
         this.crafting = new CraftingSystem();
         this.craftingUIOpen = false;
+        this.skills = SKILL_SLOTS.map(s => ({ key: s.key, skill: s.skill }));
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
 
@@ -126,6 +127,13 @@ class Game {
                     this.openCraftingUI();
                 }
             }
+            // Skill keys
+            for (const slot of this.skills) {
+                if (e.key === slot.key) {
+                    slot.skill.use(this.player, this);
+                }
+            }
+
             if (e.key === 'q' || e.key === 'Q') {
                 if (this.chestUIOpen) {
                     this.depositItem();
@@ -738,6 +746,11 @@ class Game {
             this.damageFlashTimer -= dt;
         }
 
+        // Update skills
+        for (const slot of this.skills) {
+            slot.skill.update(dt, this.player, this);
+        }
+
         // Adjust spawn interval based on distance from spawn
         const diffMult = this.getDifficultyMultiplier();
         this.spawnInterval = Math.max(500, this.baseSpawnInterval / diffMult);
@@ -982,6 +995,57 @@ class Game {
             ctx.font = '12px monospace';
             for (let i = 0; i < lines.length; i++) {
                 ctx.fillText(lines[i], ttX + padding, ttY + padding + (i + 1) * lineHeight - 4);
+            }
+        }
+
+        // Draw skill slots
+        const skillSlotSize = 40;
+        const skillMargin = 5;
+        const skillTotalWidth = this.skills.length * (skillSlotSize + skillMargin) - skillMargin;
+        const skillStartX = (this.width - skillTotalWidth) / 2;
+        const skillStartY = startY - skillSlotSize - 15;
+
+        for (let i = 0; i < this.skills.length; i++) {
+            const sx = skillStartX + i * (skillSlotSize + skillMargin);
+            const sy = skillStartY;
+            const skill = this.skills[i].skill;
+
+            // Background
+            ctx.fillStyle = skill.isActive ? '#2e7d32' : '#333';
+            ctx.fillRect(sx, sy, skillSlotSize, skillSlotSize);
+            ctx.strokeStyle = skill.canUse() ? '#4caf50' : '#555';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(sx, sy, skillSlotSize, skillSlotSize);
+
+            // Icon
+            ctx.fillStyle = skill.color;
+            ctx.font = '18px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(skill.icon, sx + skillSlotSize / 2, sy + skillSlotSize / 2 + 6);
+            ctx.textAlign = 'left';
+
+            // Key label
+            ctx.fillStyle = '#aaa';
+            ctx.font = '9px monospace';
+            ctx.fillText(this.skills[i].key.toUpperCase(), sx + 3, sy + 11);
+
+            // Cooldown overlay
+            if (skill.currentCooldown > 0) {
+                const cdPercent = skill.getCooldownPercent();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(sx, sy, skillSlotSize, skillSlotSize * cdPercent);
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.ceil(skill.currentCooldown / 1000) + 's', sx + skillSlotSize / 2, sy + skillSlotSize / 2 + 4);
+                ctx.textAlign = 'left';
+            }
+
+            // Active timer bar
+            if (skill.isActive && skill.duration > 0) {
+                const activePercent = skill.getActivePercent();
+                ctx.fillStyle = skill.color;
+                ctx.fillRect(sx, sy + skillSlotSize - 4, skillSlotSize * activePercent, 4);
             }
         }
 

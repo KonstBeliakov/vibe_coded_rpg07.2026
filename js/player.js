@@ -19,6 +19,7 @@ class Player {
         this.walkTimer = 0;
         this.isMoving = false;
         this.facingAngle = 0;
+        this.invulnerable = false;
     }
 
     applyItemStats(item) {
