@@ -47,6 +47,7 @@ class Game {
         this.merchantUIOpen = false;
         this.activeMerchant = null;
         this.achievements = new AchievementSystem();
+        this.effects = new EffectManager();
 
         // Fog of War
         this.exploredTiles = new Set();
@@ -718,6 +719,7 @@ class Game {
         }
 
         this.particles.update();
+        this.effects.update(dt);
 
         // Adjust spawn interval based on distance from spawn
         const diffMult = this.getDifficultyMultiplier();

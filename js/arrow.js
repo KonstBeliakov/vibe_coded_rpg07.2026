@@ -58,30 +58,13 @@ class Arrow {
     onHit(enemy, game) {
         switch (this.arrowType) {
             case 'fire':
-                // Fire: extra damage over time (3 ticks of 3 damage)
-                enemy.health -= 9;
-                game.particles.emit(enemy.x, enemy.y, '#ff6d00', 12, 4, 25, 4);
+                game.effects.addEffect(EFFECTS.burn, enemy, game);
                 break;
             case 'ice':
-                // Ice: slow effect (reduce speed by 40% for 2 seconds)
-                enemy.speed *= 0.6;
-                game.particles.emit(enemy.x, enemy.y, '#00bcd4', 10, 3, 20, 3);
-                setTimeout(() => {
-                    enemy.speed /= 0.6;
-                }, 2000);
+                game.effects.addEffect(EFFECTS.slow, enemy, game);
                 break;
             case 'poison':
-                // Poison: damage over time (5 ticks of 2 damage)
-                let poisonTicks = 0;
-                const poisonInterval = setInterval(() => {
-                    if (poisonTicks >= 5 || enemy.health <= 0) {
-                        clearInterval(poisonInterval);
-                        return;
-                    }
-                    enemy.health -= 2;
-                    game.particles.emit(enemy.x, enemy.y, '#76ff03', 6, 2, 15, 2);
-                    poisonTicks++;
-                }, 500);
+                game.effects.addEffect(EFFECTS.poison, enemy, game);
                 break;
         }
     }
