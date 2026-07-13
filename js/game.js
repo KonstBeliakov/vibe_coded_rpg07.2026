@@ -44,6 +44,8 @@ class Game {
         this.settingsOpen = false;
         this.chestUIOpen = false;
         this.activeChest = null;
+        this.merchantUIOpen = false;
+        this.activeMerchant = null;
         this.achievements = new AchievementSystem();
 
         // Fog of War
@@ -66,6 +68,10 @@ class Game {
         // Create storage chest in safe zone
         const storageChestPos = this.tileMap.findEmptyTile(0, 0, 4);
         this.chests.push(new Chest(storageChestPos.x, storageChestPos.y, true));
+
+        // Create merchant in safe zone
+        const merchantPos = this.tileMap.findEmptyTile(0, 0, 6);
+        this.merchant = new Merchant(merchantPos.x, merchantPos.y);
 
         // Load saved game
         this.loadGame();
@@ -111,6 +117,8 @@ class Game {
             if (e.key === 'q' || e.key === 'Q') {
                 if (this.chestUIOpen) {
                     this.depositItem();
+                } else if (this.merchantUIOpen) {
+                    this.sellToMerchant();
                 }
             }
             const num = parseInt(e.key);
@@ -151,6 +159,12 @@ class Game {
     interact() {
         const px = this.player.x;
         const py = this.player.y;
+
+        // If merchant UI is open, close it
+        if (this.merchantUIOpen) {
+            this.closeMerchantUI();
+            return;
+        }
 
         // If chest UI is open, close it
         if (this.chestUIOpen) {
@@ -193,6 +207,17 @@ class Game {
                     this.openChestUI(chest);
                 }
                 break;
+            }
+        }
+
+        // Check merchant
+        if (this.merchant) {
+            const dx = this.merchant.x - px;
+            const dy = this.merchant.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= this.merchant.interactRange) {
+                this.openMerchantUI();
+                return;
             }
         }
 
@@ -779,6 +804,11 @@ class Game {
         ctx.fill();
         ctx.restore();
 
+        // Draw merchant
+        if (this.merchant) {
+            this.merchant.draw(ctx, offsetX, offsetY);
+        }
+
         // Draw beds
         for (const bed of this.beds) {
             bed.draw(ctx, offsetX, offsetY);
@@ -1116,6 +1146,74 @@ class Game {
                 this.audio.playLevelUp();
                 return;
             }
+        }
+    }
+
+    openMerchantUI() {
+        this.merchantUIOpen = true;
+        document.getElementById('merchantUI').style.display = 'block';
+        this.renderMerchantUI();
+    }
+
+    closeMerchantUI() {
+        this.merchantUIOpen = false;
+        document.getElementById('merchantUI').style.display = 'none';
+    }
+
+    renderMerchantUI() {
+        if (!this.merchant) return;
+        const container = document.getElementById('merchantStock');
+        container.innerHTML = '';
+        document.getElementById('merchantGold').textContent = this.merchant.gold;
+
+        for (let i = 0; i < this.merchant.stock.length; i++) {
+            const item = this.merchant.stock[i];
+            const el = document.createElement('div');
+            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #7b1fa2; border-radius:3px; cursor:pointer; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:80px;';
+            el.innerHTML = `<span>${item.icon} ${item.name}</span><span style="color:#ffd54f; font-size:10px;">${item.cost} монет</span>`;
+            el.title = 'Нажми чтобы купить';
+            el.addEventListener('click', () => this.buyFromMerchant(i));
+            container.appendChild(el);
+        }
+
+        if (this.merchant.stock.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
+            empty.textContent = 'Товар закончился';
+            container.appendChild(empty);
+        }
+
+        document.getElementById('merchantSelectedSlot').textContent = this.selectedSlot + 1;
+    }
+
+    buyFromMerchant(index) {
+        if (!this.merchant) return;
+        const result = this.merchant.buyItem(index, this.slots);
+        if (!result) {
+            this.audio.playPlayerHit();
+            return;
+        }
+
+        if (result.type === 'potion') {
+            const type = result.potionType;
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, type));
+        }
+
+        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.renderMerchantUI();
+        this.audio.playLevelUp();
+    }
+
+    sellToMerchant() {
+        if (!this.merchant) return;
+        const item = this.slots[this.selectedSlot];
+        if (!item) return;
+
+        if (this.merchant.sellItem(item, this.slots)) {
+            this.slots[this.selectedSlot] = null;
+            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.renderMerchantUI();
+            this.audio.playLevelUp();
         }
     }
 
