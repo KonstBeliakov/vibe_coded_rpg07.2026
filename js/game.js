@@ -500,10 +500,11 @@ class Game {
                 this.staffProjectiles.push(new StaffProjectile(px, py, vx, vy));
             }
             this.audio.playShoot();
-        } else if (selectedItem && selectedItem.name === 'Лук') {
+        } else if (selectedItem && (selectedItem.name.includes('Лук') || selectedItem.name.includes('Огненный') || selectedItem.name.includes('Ледяной') || selectedItem.name.includes('Отравленный'))) {
             const worldMouseX = px + (this.mouseX - this.width / 2);
             const worldMouseY = py + (this.mouseY - this.height / 2);
-            this.arrows.push(new Arrow(px, py, worldMouseX, worldMouseY));
+            const arrowType = selectedItem.arrowType || 'normal';
+            this.arrows.push(new Arrow(px, py, worldMouseX, worldMouseY, arrowType));
             this.audio.playShoot();
         } else {
             const range = this.player.attackRange;
@@ -621,6 +622,7 @@ class Game {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < enemy.size / 2 + arrow.size) {
                     enemy.health -= arrow.damage;
+                    arrow.onHit(enemy, this);
                     this.audio.playHit();
                     this.particles.emit(enemy.x, enemy.y, '#ff5252', 8, 3, 20, 3);
                     if (enemy.health <= 0) {
@@ -641,6 +643,7 @@ class Game {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < this.boss.size / 2 + arrow.size) {
                     this.boss.health -= arrow.damage;
+                    arrow.onHit(this.boss, this);
                     this.audio.playHit();
                     this.particles.emit(this.boss.x, this.boss.y, '#d500f9', 10, 3, 25, 4);
                     if (this.boss.health <= 0) {

@@ -41,14 +41,30 @@ class Item {
         else if (quality > 1.1) prefix = 'Хороший ';
 
         let name;
+        let arrowType = 'normal';
         if (isStaff) {
             name = `${prefix}Посох`;
         } else if (isBow) {
-            name = `${prefix}Лук`;
+            // Bows can have special arrow types
+            const arrowRoll = Math.random();
+            if (arrowRoll < 0.2) {
+                arrowType = 'fire';
+                name = `${prefix}Огненный лук`;
+            } else if (arrowRoll < 0.4) {
+                arrowType = 'ice';
+                name = `${prefix}Ледяной лук`;
+            } else if (arrowRoll < 0.55) {
+                arrowType = 'poison';
+                name = `${prefix}Отравленный лук`;
+            } else {
+                name = `${prefix}Лук`;
+            }
         } else {
             name = `${prefix}Меч`;
         }
 
-        return new Item(name, damage, range, 'no_texture.png');
+        const item = new Item(name, damage, range, 'no_texture.png');
+        item.arrowType = arrowType;
+        return item;
     }
 }
