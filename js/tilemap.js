@@ -66,15 +66,41 @@ class TileMap {
         return this.getTile(tileX, tileY) === TILE_WALL;
     }
 
-    findEmptyTile(centerTileX, centerTileY, radius) {
+    isAreaEmpty(tileX, tileY, halfSize) {
+        // Check if a square area of halfSize radius around tileX,tileY is free of walls
+        const tilesToCheck = Math.ceil(halfSize / TILE_SIZE) + 1;
+        for (let dy = -tilesToCheck; dy <= tilesToCheck; dy++) {
+            for (let dx = -tilesToCheck; dx <= tilesToCheck; dx++) {
+                if (this.isWall(tileX + dx, tileY + dy)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    findEmptyTile(centerTileX, centerTileY, radius, entityHalfSize) {
+        entityHalfSize = entityHalfSize || 12; // Default player half-size
         for (let attempt = 0; attempt < 50; attempt++) {
             const tx = centerTileX + Math.floor((Math.random() - 0.5) * radius * 2);
             const ty = centerTileY + Math.floor((Math.random() - 0.5) * radius * 2);
-            if (!this.isWall(tx, ty)) {
+            if (!this.isWall(tx, ty) && this.isAreaEmpty(tx, ty, entityHalfSize)) {
                 return { x: tx * TILE_SIZE + TILE_SIZE / 2, y: ty * TILE_SIZE + TILE_SIZE / 2 };
             }
         }
-        // Fallback: return center of (0,0) tile
+        // Fallback: search more aggressively
+        for (let r = 0; r <= radius; r++) {
+            for (let dx = -r; dx <= r; dx++) {
+                for (let dy = -r; dy <= r; dy++) {
+                    const tx = centerTileX + dx;
+                    const ty = centerTileY + dy;
+                    if (!this.isWall(tx, ty) && this.isAreaEmpty(tx, ty, entityHalfSize)) {
+                        return { x: tx * TILE_SIZE + TILE_SIZE / 2, y: ty * TILE_SIZE + TILE_SIZE / 2 };
+                    }
+                }
+            }
+        }
+        // Ultimate fallback: return center of (0,0) tile
         return { x: TILE_SIZE / 2, y: TILE_SIZE / 2 };
     }
 

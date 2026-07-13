@@ -15,6 +15,7 @@ class Game {
         this.tileMap = new TileMap(42);
         const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
         this.player = new Player(spawnPos.x, spawnPos.y);
+        this.ensurePlayerSafePosition();
         this.enemies = [];
         this.arrows = [];
         this.staffProjectiles = [];
@@ -292,6 +293,38 @@ class Game {
         }
     }
 
+    ensurePlayerSafePosition() {
+        // Check if player is inside a wall and push them to a safe position
+        const half = this.player.size / 2;
+        const corners = [
+            { x: this.player.x - half, y: this.player.y - half },
+            { x: this.player.x + half, y: this.player.y - half },
+            { x: this.player.x - half, y: this.player.y + half },
+            { x: this.player.x + half, y: this.player.y + half }
+        ];
+
+        let inWall = false;
+        for (const corner of corners) {
+            const tileX = Math.floor(corner.x / TILE_SIZE);
+            const tileY = Math.floor(corner.y / TILE_SIZE);
+            if (this.tileMap.isWall(tileX, tileY)) {
+                inWall = true;
+                break;
+            }
+        }
+
+        if (inWall) {
+            const spawnPos = this.tileMap.findEmptyTile(
+                Math.floor(this.player.x / TILE_SIZE),
+                Math.floor(this.player.y / TILE_SIZE),
+                5,
+                half
+            );
+            this.player.x = spawnPos.x;
+            this.player.y = spawnPos.y;
+        }
+    }
+
     loadGame() {
         try {
             const raw = localStorage.getItem('rpg3_save');
@@ -307,6 +340,8 @@ class Game {
             this.player.baseAttackDamage = data.baseDamage || 15;
             this.player.baseAttackRange = data.baseRange || 50;
             this.player.applyItemStats(this.slots[this.selectedSlot]);
+            // Ensure player is not stuck in a wall after loading
+            this.ensurePlayerSafePosition();
         } catch (e) {
             // ignore
         }
@@ -326,6 +361,9 @@ class Game {
             this.player.x = spawnPos.x;
             this.player.y = spawnPos.y;
         }
+
+        // Ensure player is not stuck in a wall after respawn
+        this.ensurePlayerSafePosition();
 
         // Keep level and XP on death
         const keptLevel = this.playerLevel;
