@@ -413,8 +413,10 @@ class Game {
 
     getDifficultyMultiplier() {
         const dist = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
-        // 1.0 at spawn, increases by ~0.1 per 500 pixels
-        return 1.0 + dist / 5000;
+        // 1.0 at spawn (0-500px), increases slowly
+        // dist=0 → 1.0, dist=1000 → 1.1, dist=3000 → 1.3, dist=10000 → 2.0
+        if (dist < 500) return 1.0;
+        return 1.0 + (dist - 500) / 10000;
     }
 
     isInSafeZone(x, y) {
@@ -427,6 +429,7 @@ class Game {
         if (this.enemies.length >= this.maxEnemies) return;
 
         const diffMult = this.getDifficultyMultiplier();
+        const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
 
         const margin = 100;
         const side = Math.floor(Math.random() * 4);
@@ -448,34 +451,56 @@ class Game {
         // Don't spawn enemies inside safe zone
         if (this.isInSafeZone(x, y)) return;
 
+        // Base stats - lower near spawn
+        const baseSpeed = 0.8 + this.playerLevel * 0.03;
+        const baseHealth = 30 + this.playerLevel * 8;
+        const baseDamage = 5 + this.playerLevel * 1.5;
+        const baseXP = 8 + this.playerLevel * 2;
+
         const roll = Math.random();
         let enemy;
-        if (roll < 0.5) {
+
+        // Special enemy types only appear at certain distances
+        const canSpawnFast = distFromSpawn > 300;
+        const canSpawnTank = distFromSpawn > 600;
+        const canSpawnFlying = distFromSpawn > 1000;
+
+        if (roll < 0.5 || (!canSpawnFast && !canSpawnTank && !canSpawnFlying)) {
+            // Normal enemy - always available
             enemy = new Enemy(x, y, {
-                speed: (1.2 + this.playerLevel * 0.05) * diffMult,
-                health: (50 + this.playerLevel * 10) * diffMult,
-                attackDamage: (8 + this.playerLevel * 2) * diffMult,
-                xpReward: Math.floor((10 + this.playerLevel * 2) * diffMult),
+                speed: baseSpeed * diffMult,
+                health: baseHealth * diffMult,
+                attackDamage: baseDamage * diffMult,
+                xpReward: Math.floor(baseXP * diffMult),
                 type: 'normal'
             });
-        } else if (roll < 0.75) {
+        } else if (roll < 0.7 && canSpawnFast) {
             enemy = new FastEnemy(x, y);
-            enemy.speed *= diffMult;
-            enemy.health *= diffMult;
-            enemy.attackDamage *= diffMult;
+            enemy.speed *= diffMult * 0.9;
+            enemy.health *= diffMult * 0.8;
+            enemy.attackDamage *= diffMult * 0.8;
             enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
-        } else if (roll < 0.9) {
+        } else if (roll < 0.85 && canSpawnTank) {
             enemy = new TankEnemy(x, y);
-            enemy.speed *= diffMult;
-            enemy.health *= diffMult;
-            enemy.attackDamage *= diffMult;
+            enemy.speed *= diffMult * 0.8;
+            enemy.health *= diffMult * 1.2;
+            enemy.attackDamage *= diffMult * 0.9;
+            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+        } else if (canSpawnFlying) {
+            enemy = new FlyingEnemy(x, y);
+            enemy.speed *= diffMult * 0.85;
+            enemy.health *= diffMult * 0.7;
+            enemy.attackDamage *= diffMult * 0.7;
             enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
         } else {
-            enemy = new FlyingEnemy(x, y);
-            enemy.speed *= diffMult;
-            enemy.health *= diffMult;
-            enemy.attackDamage *= diffMult;
-            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+            // Fallback to normal
+            enemy = new Enemy(x, y, {
+                speed: baseSpeed * diffMult,
+                health: baseHealth * diffMult,
+                attackDamage: baseDamage * diffMult,
+                xpReward: Math.floor(baseXP * diffMult),
+                type: 'normal'
+            });
         }
         this.enemies.push(enemy);
     }
