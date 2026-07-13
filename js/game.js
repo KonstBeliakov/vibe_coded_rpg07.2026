@@ -48,6 +48,8 @@ class Game {
         this.activeMerchant = null;
         this.achievements = new AchievementSystem();
         this.effects = new EffectManager();
+        this.damageFlashTimer = 0;
+        this.damageFlashDuration = 300;
 
         // Fog of War
         this.exploredTiles = new Set();
@@ -594,6 +596,7 @@ class Game {
             enemy.update(this.player.x, this.player.y);
             if (enemy.tryAttack(this.player.x, this.player.y)) {
                 this.player.health -= enemy.attackDamage;
+                this.damageFlashTimer = this.damageFlashDuration;
                 this.audio.playPlayerHit();
                 this.particles.emit(this.player.x, this.player.y, '#ff1744', 10, 3, 20, 3);
                 if (this.player.health < 0) this.player.health = 0;
@@ -720,6 +723,11 @@ class Game {
 
         this.particles.update();
         this.effects.update(dt);
+
+        // Update damage flash
+        if (this.damageFlashTimer > 0) {
+            this.damageFlashTimer -= dt;
+        }
 
         // Adjust spawn interval based on distance from spawn
         const diffMult = this.getDifficultyMultiplier();
@@ -912,6 +920,13 @@ class Game {
 
         // Draw achievement notifications
         this.achievements.drawNotification(ctx);
+
+        // Damage flash overlay
+        if (this.damageFlashTimer > 0) {
+            const flashAlpha = (this.damageFlashTimer / this.damageFlashDuration) * 0.4;
+            ctx.fillStyle = `rgba(255, 0, 0, ${flashAlpha})`;
+            ctx.fillRect(0, 0, this.width, this.height);
+        }
 
         // UI text
         this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}`;
