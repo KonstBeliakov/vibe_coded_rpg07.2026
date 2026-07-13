@@ -48,6 +48,8 @@ class Game {
         this.activeMerchant = null;
         this.achievements = new AchievementSystem();
         this.effects = new EffectManager();
+        this.crafting = new CraftingSystem();
+        this.craftingUIOpen = false;
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
 
@@ -116,6 +118,13 @@ class Game {
             }
             if (e.key === this.settings.getKey('interact')) {
                 this.interact();
+            }
+            if (e.key === 'c' || e.key === 'C') {
+                if (this.craftingUIOpen) {
+                    this.closeCraftingUI();
+                } else {
+                    this.openCraftingUI();
+                }
             }
             if (e.key === 'q' || e.key === 'Q') {
                 if (this.chestUIOpen) {
@@ -1296,6 +1305,62 @@ class Game {
             this.renderMerchantUI();
             this.audio.playLevelUp();
         }
+    }
+
+    openCraftingUI() {
+        this.craftingUIOpen = true;
+        document.getElementById('craftingUI').style.display = 'block';
+        this.renderCraftingUI();
+    }
+
+    closeCraftingUI() {
+        this.craftingUIOpen = false;
+        document.getElementById('craftingUI').style.display = 'none';
+    }
+
+    renderCraftingUI() {
+        document.getElementById('craftingResources').textContent = this.crafting.getResourceString();
+        const container = document.getElementById('craftingRecipes');
+        container.innerHTML = '';
+
+        for (let i = 0; i < RECIPES.length; i++) {
+            const recipe = RECIPES[i];
+            const canCraft = this.crafting.canCraft(recipe);
+            const el = document.createElement('div');
+            el.style.cssText = `padding:4px 8px; background:${canCraft ? '#444' : '#333'}; border:1px solid ${canCraft ? '#ff8f00' : '#555'}; border-radius:3px; cursor:${canCraft ? 'pointer' : 'not-allowed'}; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:90px; opacity:${canCraft ? 1 : 0.5};`;
+            el.innerHTML = `<span>${recipe.name}</span><span style="color:#aaa; font-size:9px;">${recipe.description}</span>`;
+            if (canCraft) {
+                el.addEventListener('click', () => this.craftItem(i));
+            }
+            container.appendChild(el);
+        }
+    }
+
+    craftItem(recipeIndex) {
+        const result = this.crafting.craft(recipeIndex);
+        if (!result) {
+            this.audio.playPlayerHit();
+            return;
+        }
+
+        if (result === 'potion_health') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'health'));
+        } else if (result === 'potion_speed') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'speed'));
+        } else {
+            // Put crafted item in first empty slot
+            for (let i = 0; i < this.slots.length; i++) {
+                if (!this.slots[i]) {
+                    this.slots[i] = result;
+                    this.player.applyItemStats(this.slots[this.selectedSlot]);
+                    break;
+                }
+            }
+        }
+
+        this.renderCraftingUI();
+        this.audio.playLevelUp();
+        this.particles.emit(this.player.x, this.player.y, '#ffd54f', 10, 3, 25, 4);
     }
 
     gameLoop(time) {
