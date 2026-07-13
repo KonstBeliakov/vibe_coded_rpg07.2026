@@ -19,9 +19,12 @@ class Game {
         this.arrows = [];
         this.chests = [];
         this.potions = [];
+        this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
         this.safeZoneRadius = TILE_SIZE * 5; // Safe zone radius around spawn (0,0)
+        this.spawnBedX = spawnPos.x;
+        this.spawnBedY = spawnPos.y;
         this.mouseX = 0;
         this.mouseY = 0;
         this.spawnTimer = 0;
@@ -47,6 +50,10 @@ class Game {
         this.slots[0] = new Item('Меч', 10, 10, 'no_texture.png');
         this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
         this.player.applyItemStats(this.slots[this.selectedSlot]);
+
+        // Create bed in safe zone
+        const bedPos = this.tileMap.findEmptyTile(0, 0, 3);
+        this.beds.push(new Bed(bedPos.x, bedPos.y));
 
         // Load saved game
         this.loadGame();
@@ -150,6 +157,23 @@ class Game {
             }
         }
 
+        // Check beds
+        for (const bed of this.beds) {
+            const dx = bed.x - px;
+            const dy = bed.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= bed.interactRange) {
+                if (!bed.activated) {
+                    bed.activate();
+                    this.spawnBedX = bed.x;
+                    this.spawnBedY = bed.y;
+                    this.audio.playLevelUp();
+                    this.particles.emit(bed.x, bed.y, '#66bb6a', 10, 3, 25, 4);
+                }
+                break;
+            }
+        }
+
         // Check potions on ground
         for (const potion of this.potions) {
             if (potion.collected) continue;
@@ -207,9 +231,17 @@ class Game {
     restartGame() {
         this.gameOver = false;
         this.deathScreen.style.display = 'none';
-        const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
-        this.player.x = spawnPos.x;
-        this.player.y = spawnPos.y;
+
+        // Respawn at bed if activated, otherwise at spawn
+        const bedActivated = this.beds.some(b => b.activated);
+        if (bedActivated) {
+            this.player.x = this.spawnBedX;
+            this.player.y = this.spawnBedY;
+        } else {
+            const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
+            this.player.x = spawnPos.x;
+            this.player.y = spawnPos.y;
+        }
 
         // Keep level and XP on death
         const keptLevel = this.playerLevel;
@@ -606,6 +638,11 @@ class Game {
         ctx.fill();
         ctx.restore();
 
+        // Draw beds
+        for (const bed of this.beds) {
+            bed.draw(ctx, offsetX, offsetY);
+        }
+
         // Draw chests
         for (const chest of this.chests) {
             chest.draw(ctx, offsetX, offsetY);
@@ -734,6 +771,18 @@ class Game {
                     ctx.fillStyle = '#222';
                     ctx.fillRect(sx, sy, tileSize, tileSize);
                 }
+            }
+        }
+
+        // Draw beds on minimap
+        ctx.fillStyle = '#8d6e63';
+        for (const bed of this.beds) {
+            const dx = Math.floor(bed.x / TILE_SIZE) - centerTileX;
+            const dy = Math.floor(bed.y / TILE_SIZE) - centerTileY;
+            if (Math.abs(dx) <= viewRadius && Math.abs(dy) <= viewRadius) {
+                const sx = mapX + (dx + viewRadius) * tileSize + 2;
+                const sy = mapY + (dy + viewRadius) * tileSize + 16;
+                ctx.fillRect(sx, sy, tileSize, tileSize);
             }
         }
 
