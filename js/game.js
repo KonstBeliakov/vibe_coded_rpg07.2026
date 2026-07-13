@@ -45,6 +45,10 @@ class Game {
         this.chestUIOpen = false;
         this.activeChest = null;
 
+        // Fog of War
+        this.exploredTiles = new Set();
+        this.fogRevealRadius = 6; // tiles
+
         // Inventory slots
         this.slots = new Array(8).fill(null);
         this.selectedSlot = 0;
@@ -701,6 +705,18 @@ class Game {
             }
         }
 
+        // Update fog of war
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+        for (let dy = -this.fogRevealRadius; dy <= this.fogRevealRadius; dy++) {
+            for (let dx = -this.fogRevealRadius; dx <= this.fogRevealRadius; dx++) {
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= this.fogRevealRadius) {
+                    this.exploredTiles.add(`${playerTileX + dx},${playerTileY + dy}`);
+                }
+            }
+        }
+
         // Check death
         if (this.player.health <= 0) {
             this.gameOver = true;
@@ -719,6 +735,25 @@ class Game {
         ctx.fillRect(0, 0, this.width, this.height);
 
         this.tileMap.draw(ctx, offsetX, offsetY);
+
+        // Draw fog of war
+        const viewTileW = Math.ceil(this.width / TILE_SIZE) + 2;
+        const viewTileH = Math.ceil(this.height / TILE_SIZE) + 2;
+        const playerTX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTY = Math.floor(this.player.y / TILE_SIZE);
+        for (let dy = -Math.ceil(viewTileH / 2); dy <= Math.ceil(viewTileH / 2); dy++) {
+            for (let dx = -Math.ceil(viewTileW / 2); dx <= Math.ceil(viewTileW / 2); dx++) {
+                const tx = playerTX + dx;
+                const ty = playerTY + dy;
+                const key = `${tx},${ty}`;
+                if (!this.exploredTiles.has(key)) {
+                    const sx = tx * TILE_SIZE + offsetX;
+                    const sy = ty * TILE_SIZE + offsetY;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                    ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
 
         // Draw safe zone
         ctx.save();
