@@ -12,11 +12,17 @@ class Chest {
     }
 
     generateLoot() {
-        const items = ['potion_health', 'potion_speed', 'gold'];
         const loot = [];
         const count = 1 + Math.floor(Math.random() * 3);
         for (let i = 0; i < count; i++) {
-            loot.push(items[Math.floor(Math.random() * items.length)]);
+            const roll = Math.random();
+            if (roll < 0.4) {
+                loot.push('potion_health');
+            } else if (roll < 0.7) {
+                loot.push('potion_speed');
+            } else {
+                loot.push('weapon');
+            }
         }
         return loot;
     }

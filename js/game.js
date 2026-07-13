@@ -167,6 +167,17 @@ class Game {
                         if (item === 'potion_health' || item === 'potion_speed') {
                             const type = item === 'potion_health' ? 'health' : 'speed';
                             this.potions.push(new Potion(chest.x + (Math.random() - 0.5) * 20, chest.y + (Math.random() - 0.5) * 20, type));
+                        } else if (item === 'weapon') {
+                            const dist = Math.sqrt(chest.x * chest.x + chest.y * chest.y);
+                            const weapon = Item.generateWeapon(dist);
+                            // Put weapon in first empty slot
+                            for (let i = 0; i < this.slots.length; i++) {
+                                if (!this.slots[i]) {
+                                    this.slots[i] = weapon;
+                                    this.player.applyItemStats(this.slots[this.selectedSlot]);
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
