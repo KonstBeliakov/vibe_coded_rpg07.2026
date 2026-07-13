@@ -889,6 +889,10 @@ class Game {
         const startX = (this.width - totalWidth) / 2;
         const startY = this.height - slotSize - 15;
 
+        let tooltipText = null;
+        let tooltipX = 0;
+        let tooltipY = 0;
+
         for (let i = 0; i < this.slots.length; i++) {
             const sx = startX + i * (slotSize + slotMargin);
             const sy = startY;
@@ -912,6 +916,63 @@ class Game {
                     ctx.font = '10px monospace';
                     ctx.fillText(item.name, sx + 5, sy + slotSize / 2 + 5);
                 }
+
+                // Check mouse hover for tooltip
+                const mouseCanvasX = this.mouseX - this.canvas.getBoundingClientRect().left;
+                const mouseCanvasY = this.mouseY - this.canvas.getBoundingClientRect().top;
+                if (mouseCanvasX >= sx && mouseCanvasX <= sx + slotSize &&
+                    mouseCanvasY >= sy && mouseCanvasY <= sy + slotSize) {
+                    tooltipText = item.name;
+                    tooltipX = mouseCanvasX + 15;
+                    tooltipY = mouseCanvasY - 10;
+
+                    // Build tooltip details
+                    let details = [];
+                    if (item.attackDamage > 0) details.push(`Урон: +${item.attackDamage}`);
+                    if (item.attackRange > 0) details.push(`Радиус: +${item.attackRange}`);
+                    if (item.arrowType && item.arrowType !== 'normal') {
+                        const typeNames = { fire: 'Огненный', ice: 'Ледяной', poison: 'Отравленный' };
+                        details.push(`Тип стрел: ${typeNames[item.arrowType]}`);
+                    }
+                    if (details.length > 0) {
+                        tooltipText += '\n' + details.join('\n');
+                    }
+                }
+            }
+        }
+
+        // Draw tooltip
+        if (tooltipText) {
+            const lines = tooltipText.split('\n');
+            const lineHeight = 16;
+            const padding = 6;
+            let maxWidth = 0;
+            ctx.font = '12px monospace';
+            for (const line of lines) {
+                const w = ctx.measureText(line).width;
+                if (w > maxWidth) maxWidth = w;
+            }
+            const tooltipW = maxWidth + padding * 2;
+            const tooltipH = lines.length * lineHeight + padding * 2;
+
+            // Keep tooltip on screen
+            let ttX = tooltipX;
+            let ttY = tooltipY;
+            if (ttX + tooltipW > this.width) ttX = this.width - tooltipW - 5;
+            if (ttY + tooltipH > this.height) ttY = this.height - tooltipH - 5;
+            if (ttX < 0) ttX = 5;
+            if (ttY < 0) ttY = 5;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            ctx.fillRect(ttX, ttY, tooltipW, tooltipH);
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(ttX, ttY, tooltipW, tooltipH);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px monospace';
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], ttX + padding, ttY + padding + (i + 1) * lineHeight - 4);
             }
         }
 
