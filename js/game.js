@@ -34,8 +34,8 @@ class Game {
         this.mouseX = 0;
         this.mouseY = 0;
         this.spawnTimer = 0;
-        this.spawnInterval = 2000;
-        this.baseSpawnInterval = 2000;
+        this.spawnInterval = 4000;
+        this.baseSpawnInterval = 4000;
         this.chestSpawnTimer = 0;
         this.chestSpawnInterval = 15000;
         this.playerXP = 0;
@@ -46,7 +46,7 @@ class Game {
         this.settings = new Settings();
         this.particles = new ParticleSystem();
         this.audio = new AudioSystem();
-        this.maxEnemies = 20;
+        this.maxEnemies = 12;
         this.settingsOpen = false;
         this.chestUIOpen = false;
         this.activeChest = null;
@@ -562,9 +562,9 @@ class Game {
         if (this.isInSafeZone(x, y)) return;
 
         // Base stats - lower near spawn
-        const baseSpeed = 0.8 + this.playerLevel * 0.03;
-        const baseHealth = 30 + this.playerLevel * 8;
-        const baseDamage = 5 + this.playerLevel * 1.5;
+        const baseSpeed = 0.5 + this.playerLevel * 0.02;
+        const baseHealth = 25 + this.playerLevel * 6;
+        const baseDamage = 3 + this.playerLevel * 1.0;
         const baseXP = 8 + this.playerLevel * 2;
 
         const roll = Math.random();
