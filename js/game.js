@@ -23,6 +23,7 @@ class Game {
         this.chests = [];
         this.potions = [];
         this.flowers = [];
+        this.thornFlowers = [];
         this.webs = [];
         this.lavaPools = [];
         this.beds = [];
@@ -286,6 +287,22 @@ class Game {
                 if (flower.interact(this.player)) {
                     this.audio.playLevelUp();
                     this.particles.emit(flower.x, flower.y, '#42a5f5', 8, 3, 20, 3);
+                }
+                break;
+            }
+        }
+
+        // Check thorn flowers (collect to get essence)
+        for (const thorn of this.thornFlowers) {
+            if (thorn.collected) continue;
+            const dx = thorn.x - px;
+            const dy = thorn.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= thorn.interactRange) {
+                if (thorn.interact(this.player)) {
+                    this.crafting.addResource('essence', thorn.essenceReward);
+                    this.audio.playLevelUp();
+                    this.particles.emit(thorn.x, thorn.y, '#e53935', 8, 3, 20, 3);
                 }
                 break;
             }
@@ -718,6 +735,7 @@ class Game {
     spawnFlowers() {
         // Spawn flowers in mossy biome near the player
         if (this.flowers.length >= 60) return; // Limit total flowers
+        if (this.thornFlowers.length >= 30) return; // Limit total thorn flowers
 
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
         const playerTileY = Math.floor(this.player.y / TILE_SIZE);
@@ -731,9 +749,13 @@ class Game {
                 // Only check if this is mossy biome
                 if (this.tileMap.getBiome(tx, ty) !== BIOME_MOSSY) continue;
 
-                // Check if there's already a flower at this tile
+                // Don't place flowers on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
                 const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
                 const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+
+                // Check if there's already a blue flower at this tile
                 let alreadyHasFlower = false;
                 for (const f of this.flowers) {
                     const fx = Math.floor(f.x / TILE_SIZE);
@@ -745,12 +767,26 @@ class Game {
                 }
                 if (alreadyHasFlower) continue;
 
-                // Don't place flowers on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
+                // Check if there's already a thorn flower at this tile
+                let alreadyHasThorn = false;
+                for (const f of this.thornFlowers) {
+                    const fx = Math.floor(f.x / TILE_SIZE);
+                    const fy = Math.floor(f.y / TILE_SIZE);
+                    if (fx === tx && fy === ty) {
+                        alreadyHasThorn = true;
+                        break;
+                    }
+                }
+                if (alreadyHasThorn) continue;
 
                 // Place flower with some randomness (not every tile)
                 if (Math.random() < 0.4) {
-                    this.flowers.push(new Flower(worldX, worldY));
+                    // 70% chance blue flower, 30% chance thorn flower
+                    if (Math.random() < 0.7) {
+                        this.flowers.push(new Flower(worldX, worldY));
+                    } else {
+                        this.thornFlowers.push(new ThornFlower(worldX, worldY));
+                    }
                 }
             }
         }
@@ -1150,6 +1186,11 @@ class Game {
             lava.applyDamage(this.player, performance.now());
         }
 
+        // Apply thorn flower damage
+        for (const thorn of this.thornFlowers) {
+            thorn.applyDamage(this.player, performance.now());
+        }
+
         // Apply web slow effect
         let webSlow = 1.0;
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
@@ -1258,6 +1299,11 @@ class Game {
         // Draw flowers
         for (const flower of this.flowers) {
             flower.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw thorn flowers
+        for (const thorn of this.thornFlowers) {
+            thorn.draw(ctx, offsetX, offsetY);
         }
 
         // Draw webs
