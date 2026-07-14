@@ -828,6 +828,31 @@ class Game {
                 }
             }
 
+            // Try to mine ore if attacking with melee weapon
+            const oreRange = this.player.attackRange + 20;
+            const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+            const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const tx = playerTileX + dx;
+                    const ty = playerTileY + dy;
+                    if (this.tileMap.isOre(tx, ty)) {
+                        // Check distance to ore tile
+                        const oreWorldX = tx * TILE_SIZE + TILE_SIZE / 2;
+                        const oreWorldY = ty * TILE_SIZE + TILE_SIZE / 2;
+                        const dx2 = oreWorldX - this.player.x;
+                        const dy2 = oreWorldY - this.player.y;
+                        const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        if (dist <= oreRange) {
+                            this.tileMap.mineOre(tx, ty);
+                            this.crafting.addResource('metal', 1);
+                            this.audio.playHit();
+                            this.particles.emit(oreWorldX, oreWorldY, '#ffd54f', 8, 3, 20, 3);
+                        }
+                    }
+                }
+            }
+
             // Attack boss with melee
             if (this.boss) {
                 const dx = this.boss.x - px;
