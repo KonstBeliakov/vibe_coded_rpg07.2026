@@ -136,6 +136,6 @@ class FireballSkill extends Skill {
 // Skill slots
 const SKILL_SLOTS = [
     { key: 'q', skill: new ShieldSkill() },
-    { key: 'e', skill: new DashSkill() },
+    { key: 'f', skill: new DashSkill() },
     { key: 'r', skill: new FireballSkill() }
 ];
