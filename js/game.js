@@ -639,50 +639,75 @@ class Game {
         const baseDamage = 3 + this.playerLevel * 1.0;
         const baseXP = 8 + this.playerLevel * 2;
 
+        // Check biome for special enemy types
+        const enemyTileX = Math.floor(x / TILE_SIZE);
+        const enemyTileY = Math.floor(y / TILE_SIZE);
+        const biome = this.tileMap.getBiome(enemyTileX, enemyTileY);
         const roll = Math.random();
         let enemy;
 
-        // Special enemy types only appear at certain distances
-        const canSpawnFast = distFromSpawn > 300;
-        const canSpawnTank = distFromSpawn > 600;
-        const canSpawnFlying = distFromSpawn > 1000;
-
-        if (roll < 0.5 || (!canSpawnFast && !canSpawnTank && !canSpawnFlying)) {
-            // Normal enemy - always available
-            enemy = new Enemy(x, y, {
-                speed: baseSpeed * diffMult,
-                health: baseHealth * diffMult,
-                attackDamage: baseDamage * diffMult,
-                xpReward: Math.floor(baseXP * diffMult),
-                type: 'normal'
-            });
-        } else if (roll < 0.7 && canSpawnFast) {
-            enemy = new FastEnemy(x, y);
+        // Biome-specific enemies
+        if (biome === BIOME_DESERT && distFromSpawn > 200 && roll < 0.4) {
+            enemy = new DesertSkeleton(x, y);
             enemy.speed *= diffMult * 0.9;
-            enemy.health *= diffMult * 0.8;
-            enemy.attackDamage *= diffMult * 0.8;
-            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
-        } else if (roll < 0.85 && canSpawnTank) {
-            enemy = new TankEnemy(x, y);
-            enemy.speed *= diffMult * 0.8;
-            enemy.health *= diffMult * 1.2;
+            enemy.health *= diffMult * 0.9;
             enemy.attackDamage *= diffMult * 0.9;
             enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
-        } else if (canSpawnFlying) {
-            enemy = new FlyingEnemy(x, y);
-            enemy.speed *= diffMult * 0.85;
-            enemy.health *= diffMult * 0.7;
-            enemy.attackDamage *= diffMult * 0.7;
+        } else if (biome === BIOME_SWAMP && distFromSpawn > 200 && roll < 0.4) {
+            enemy = new SwampSlime(x, y);
+            enemy.speed *= diffMult * 0.9;
+            enemy.health *= diffMult * 0.9;
+            enemy.attackDamage *= diffMult * 0.9;
+            enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+        } else if (biome === BIOME_MAGIC && distFromSpawn > 400 && roll < 0.35) {
+            enemy = new MagicGolem(x, y);
+            enemy.speed *= diffMult * 0.8;
+            enemy.health *= diffMult * 1.1;
+            enemy.attackDamage *= diffMult * 1.0;
             enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
         } else {
-            // Fallback to normal
-            enemy = new Enemy(x, y, {
-                speed: baseSpeed * diffMult,
-                health: baseHealth * diffMult,
-                attackDamage: baseDamage * diffMult,
-                xpReward: Math.floor(baseXP * diffMult),
-                type: 'normal'
-            });
+            // Special enemy types only appear at certain distances
+            const canSpawnFast = distFromSpawn > 300;
+            const canSpawnTank = distFromSpawn > 600;
+            const canSpawnFlying = distFromSpawn > 1000;
+
+            if (roll < 0.5 || (!canSpawnFast && !canSpawnTank && !canSpawnFlying)) {
+                // Normal enemy - always available
+                enemy = new Enemy(x, y, {
+                    speed: baseSpeed * diffMult,
+                    health: baseHealth * diffMult,
+                    attackDamage: baseDamage * diffMult,
+                    xpReward: Math.floor(baseXP * diffMult),
+                    type: 'normal'
+                });
+            } else if (roll < 0.7 && canSpawnFast) {
+                enemy = new FastEnemy(x, y);
+                enemy.speed *= diffMult * 0.9;
+                enemy.health *= diffMult * 0.8;
+                enemy.attackDamage *= diffMult * 0.8;
+                enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+            } else if (roll < 0.85 && canSpawnTank) {
+                enemy = new TankEnemy(x, y);
+                enemy.speed *= diffMult * 0.8;
+                enemy.health *= diffMult * 1.2;
+                enemy.attackDamage *= diffMult * 0.9;
+                enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+            } else if (canSpawnFlying) {
+                enemy = new FlyingEnemy(x, y);
+                enemy.speed *= diffMult * 0.85;
+                enemy.health *= diffMult * 0.7;
+                enemy.attackDamage *= diffMult * 0.7;
+                enemy.xpReward = Math.floor(enemy.xpReward * diffMult);
+            } else {
+                // Fallback to normal
+                enemy = new Enemy(x, y, {
+                    speed: baseSpeed * diffMult,
+                    health: baseHealth * diffMult,
+                    attackDamage: baseDamage * diffMult,
+                    xpReward: Math.floor(baseXP * diffMult),
+                    type: 'normal'
+                });
+            }
         }
         this.enemies.push(enemy);
     }
