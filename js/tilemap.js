@@ -4,6 +4,10 @@ const TILE_EMPTY = 0;
 const TILE_WALL = 1;
 const CHUNK_SIZE = 16;
 
+// Biome types
+const BIOME_NORMAL = 0;
+const BIOME_MOSSY = 1;
+
 class TileMap {
     constructor(seed) {
         this.perlin = new PerlinNoise(seed);
@@ -12,6 +16,15 @@ class TileMap {
         this.chunks = new Map();
         this.safeZones = [];
         this.safeZoneChunks = new Set(); // Track which chunks have safe zones
+    }
+
+    getBiome(tileX, tileY) {
+        // Use a different noise scale for biome generation
+        const biomeNoise = this.perlin.octaveNoise(tileX * 0.03, tileY * 0.03, 2, 0.5);
+        if (biomeNoise > 0.3) {
+            return BIOME_MOSSY;
+        }
+        return BIOME_NORMAL;
     }
 
     getChunkKey(cx, cy) {
@@ -177,7 +190,15 @@ class TileMap {
                 if (this.isWall(x, y)) {
                     ctx.fillStyle = '#555';
                 } else {
-                    ctx.fillStyle = '#2a2a2a';
+                    // Choose floor color based on biome
+                    const biome = this.getBiome(x, y);
+                    switch (biome) {
+                        case BIOME_MOSSY:
+                            ctx.fillStyle = '#1a3a1a'; // Dark green mossy floor
+                            break;
+                        default:
+                            ctx.fillStyle = '#2a2a2a'; // Normal dark floor
+                    }
                 }
 
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
