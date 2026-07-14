@@ -75,15 +75,15 @@ class TileMap {
         // Skip center chunk (already has safe zone at 0,0)
         if (cx === 0 && cy === 0) return;
 
-        // Generate safe zones with some spacing - roughly every 3-5 chunks
+        // Generate safe zones more frequently - roughly every 2-3 chunks
         // Use perlin noise to determine if this chunk gets a safe zone
         const noiseVal = this.perlin.octaveNoise(cx * 3.7, cy * 3.7, 2, 0.5);
-        const shouldHaveZone = noiseVal > 0.6;
+        const shouldHaveZone = noiseVal > 0.3;
 
         if (!shouldHaveZone) return;
 
         // Check that we don't have too many safe zones already
-        if (this.safeZones.length >= 15) return;
+        if (this.safeZones.length >= 30) return;
 
         // Find a good spot for the safe zone center in this chunk
         const centerTileX = cx * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);

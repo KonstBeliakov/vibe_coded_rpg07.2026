@@ -714,7 +714,7 @@ class Game {
 
     spawnFlowers() {
         // Spawn flowers in mossy biome near the player
-        if (this.flowers.length >= 30) return; // Limit total flowers
+        if (this.flowers.length >= 60) return; // Limit total flowers
 
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
         const playerTileY = Math.floor(this.player.y / TILE_SIZE);
@@ -746,7 +746,7 @@ class Game {
                 if (this.tileMap.isWall(tx, ty)) continue;
 
                 // Place flower with some randomness (not every tile)
-                if (Math.random() < 0.15) {
+                if (Math.random() < 0.4) {
                     this.flowers.push(new Flower(worldX, worldY));
                 }
             }
