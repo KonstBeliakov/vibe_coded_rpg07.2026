@@ -72,6 +72,31 @@ const RECIPES = [
         },
         ingredients: { wood: 4, metal: 2, essence: 3 },
         description: 'Стреляет отравленными стрелами'
+    },
+    {
+        name: 'Кольчуга',
+        result: () => {
+            const item = new Item('Кольчуга', 0, 0, 'no_texture.png');
+            item.maxHealthBonus = 50;
+            return item;
+        },
+        ingredients: { metal: 5 },
+        description: '+50 к макс. здоровью'
+    },
+    {
+        name: 'Стальной меч',
+        result: () => new Item('Стальной меч', 18, 12, 'no_texture.png'),
+        ingredients: { wood: 2, metal: 5 },
+        description: 'Урон +18, радиус +12'
+    },
+    {
+        name: 'Тяжелый лук',
+        result: () => {
+            const item = new Item('Тяжелый лук', 10, 0, 'no_texture.png');
+            return item;
+        },
+        ingredients: { wood: 5, metal: 3 },
+        description: 'Урон +10'
     }
 ];
 

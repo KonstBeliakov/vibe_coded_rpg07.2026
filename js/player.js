@@ -27,6 +27,10 @@ class Player {
         if (item) {
             this.attackDamage = this.baseAttackDamage + item.attackDamage;
             this.attackRange = this.baseAttackRange + item.attackRange;
+            if (item.maxHealthBonus) {
+                this.maxHealth = 100 + item.maxHealthBonus;
+                this.health = Math.min(this.health, this.maxHealth);
+            }
         } else {
             this.attackDamage = this.baseAttackDamage;
             this.attackRange = this.baseAttackRange;
