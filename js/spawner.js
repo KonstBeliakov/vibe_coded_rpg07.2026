@@ -152,7 +152,7 @@ class Spawner {
                 const ty = playerTileY + dy;
 
                 const biome = game.tileMap.getBiome(tx, ty);
-                if (biome !== BIOME_DEFAULT && biome !== BIOME_WEB) continue;
+                if (biome !== BIOME_NORMAL && biome !== BIOME_WEB) continue;
                 if (game.tileMap.isWall(tx, ty)) continue;
 
                 const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
@@ -188,7 +188,7 @@ class Spawner {
                 const ty = playerTileY + dy;
 
                 const biome = game.tileMap.getBiome(tx, ty);
-                if (biome !== BIOME_DEFAULT && biome !== BIOME_MOSSY) continue;
+                if (biome !== BIOME_NORMAL && biome !== BIOME_MOSSY) continue;
                 if (game.tileMap.isWall(tx, ty)) continue;
 
                 const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
@@ -204,7 +204,7 @@ class Spawner {
                 if (alreadyHasTree) continue;
 
                 if (Math.random() < 0.12) {
-                    const isDead = biome === BIOME_DEFAULT;
+                    const isDead = biome === BIOME_NORMAL;
                     game.trees.push(new Tree(worldX, worldY, isDead));
                 }
             }
