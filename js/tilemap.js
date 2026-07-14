@@ -24,11 +24,11 @@ class TileMap {
     getBiome(tileX, tileY) {
         // Use a different noise scale for biome generation
         const biomeNoise = this.perlin.octaveNoise(tileX * 0.03, tileY * 0.03, 2, 0.5);
-        if (biomeNoise > 0.3 && biomeNoise < 0.5) {
+        if (biomeNoise > 0.3 && biomeNoise < 0.45) {
             return BIOME_MOSSY;
-        } else if (biomeNoise >= 0.5 && biomeNoise < 0.7) {
+        } else if (biomeNoise >= 0.45 && biomeNoise < 0.55) {
             return BIOME_WEB;
-        } else if (biomeNoise >= 0.7) {
+        } else if (biomeNoise >= 0.55) {
             return BIOME_LAVA;
         }
         return BIOME_NORMAL;
