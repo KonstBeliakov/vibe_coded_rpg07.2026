@@ -39,18 +39,18 @@ class Player {
         this.regenRemaining = 0;
     }
 
-    applyItemStats(item) {
+    applyItemStats(item, armorDefense = 0, armorHealthBonus = 0) {
         if (item) {
             this.attackDamage = this.baseAttackDamage + item.attackDamage;
             this.attackRange = this.baseAttackRange + item.attackRange;
-            if (item.maxHealthBonus) {
-                this.maxHealth = 100 + item.maxHealthBonus;
-                this.health = Math.min(this.health, this.maxHealth);
-            }
         } else {
             this.attackDamage = this.baseAttackDamage;
             this.attackRange = this.baseAttackRange;
         }
+        // Apply armor health bonus (doesn't change with weapon switch)
+        const baseMaxHealth = 100 + (item && item.maxHealthBonus ? item.maxHealthBonus : 0);
+        this.maxHealth = baseMaxHealth + armorHealthBonus;
+        this.health = Math.min(this.health, this.maxHealth);
     }
 
     update(keys) {

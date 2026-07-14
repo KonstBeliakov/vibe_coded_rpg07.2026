@@ -94,7 +94,7 @@ class Game {
         // Create items
         this.slots[0] = new Item('Меч', 10, 10, 'no_texture.png');
         this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
-        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
 
         // Create bed in safe zone
         const bedPos = this.tileMap.findEmptyTile(0, 0, 3);
@@ -173,7 +173,7 @@ class Game {
             const num = parseInt(e.key);
             if (num >= 1 && num <= 8) {
                 this.selectedSlot = num - 1;
-                this.player.applyItemStats(this.slots[this.selectedSlot]);
+                this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
             }
         });
 
@@ -188,7 +188,7 @@ class Game {
             } else {
                 this.selectedSlot = (this.selectedSlot - 1 + 8) % 8;
             }
-            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
         });
 
         window.addEventListener('mousemove', (e) => {
@@ -256,7 +256,7 @@ class Game {
                             for (let i = 0; i < this.slots.length; i++) {
                                 if (!this.slots[i]) {
                                     this.slots[i] = weapon;
-                                    this.player.applyItemStats(this.slots[this.selectedSlot]);
+                                    this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
                                     break;
                                 }
                             }
@@ -450,7 +450,7 @@ class Game {
             this.xpToNextLevel = data.xpToNext || 50;
             this.player.baseAttackDamage = data.baseDamage || 15;
             this.player.baseAttackRange = data.baseRange || 50;
-            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
             // Ensure player is not stuck in a wall after loading
             this.ensurePlayerSafePosition();
         } catch (e) {
@@ -492,7 +492,7 @@ class Game {
         this.slots[0] = new Item('Меч', 10, 10, 'no_texture.png');
         this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
         this.selectedSlot = 0;
-        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
 
         this.playerLevel = keptLevel;
         this.playerXP = keptXP;
@@ -519,7 +519,7 @@ class Game {
             this.player.health = Math.min(this.player.health + 20, this.player.maxHealth);
             this.player.baseAttackDamage += 3;
             this.player.baseAttackRange += 2;
-            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
             this.audio.playLevelUp();
             this.particles.emit(this.player.x, this.player.y, '#ffd700', 20, 5, 40, 5);
 
@@ -750,7 +750,6 @@ class Game {
             }
 
             // Try to mine ore if attacking with melee weapon
-            const selectedItem = this.slots[this.selectedSlot];
             const isPickaxe = selectedItem && selectedItem.isPickaxe;
             const oreRange = this.player.attackRange + 20;
             const playerTileX = Math.floor(this.player.x / TILE_SIZE);
@@ -1712,7 +1711,7 @@ class Game {
 
         this.activeChest.addItem(item);
         this.slots[this.selectedSlot] = null;
-        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
         this.renderChestUI();
         this.audio.playHit();
     }
@@ -1726,7 +1725,7 @@ class Game {
         for (let i = 0; i < this.slots.length; i++) {
             if (!this.slots[i]) {
                 this.slots[i] = item;
-                this.player.applyItemStats(this.slots[this.selectedSlot]);
+                this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
                 this.renderChestUI();
                 this.audio.playLevelUp();
                 return;
@@ -1786,7 +1785,7 @@ class Game {
             this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, type));
         }
 
-        this.player.applyItemStats(this.slots[this.selectedSlot]);
+        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
         this.renderMerchantUI();
         this.audio.playLevelUp();
     }
@@ -1800,7 +1799,7 @@ class Game {
         if (value > 0) {
             this.playerGold += value;
             this.slots[this.selectedSlot] = null;
-            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
             this.renderMerchantUI();
             this.audio.playLevelUp();
         }
@@ -1888,17 +1887,18 @@ class Game {
                 selectedItem.name = 'Отравленный ' + selectedItem.name;
             }
 
-            this.player.applyItemStats(this.slots[this.selectedSlot]);
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
         } else if (result.armorType) {
             // Equip armor to the appropriate slot
             this.armorSlots[result.armorType] = result;
             this.updateArmorStats();
+            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
         } else {
             // Put crafted item in first empty slot
             for (let i = 0; i < this.slots.length; i++) {
                 if (!this.slots[i]) {
                     this.slots[i] = result;
-                    this.player.applyItemStats(this.slots[this.selectedSlot]);
+                    this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
                     break;
                 }
             }
@@ -1907,6 +1907,17 @@ class Game {
         this.renderCraftingUI();
         this.audio.playLevelUp();
         this.particles.emit(this.player.x, this.player.y, '#ffd54f', 10, 3, 25, 4);
+    }
+
+    getArmorHealthBonus() {
+        let total = 0;
+        for (const slot of ['helmet', 'chestplate', 'leggings']) {
+            const armor = this.armorSlots[slot];
+            if (armor) {
+                total += armor.maxHealthBonus || 0;
+            }
+        }
+        return total;
     }
 
     updateArmorStats() {
