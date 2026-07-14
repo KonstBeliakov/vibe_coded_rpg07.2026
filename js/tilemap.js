@@ -10,6 +10,8 @@ class TileMap {
         this.scale = 0.08;
         this.threshold = 0.15;
         this.chunks = new Map();
+        this.safeZones = [];
+        this.safeZoneChunks = new Set(); // Track which chunks have safe zones
     }
 
     getChunkKey(cx, cy) {
@@ -45,6 +47,63 @@ class TileMap {
         }
 
         this.chunks.set(key, tiles);
+
+        // Generate safe zones procedurally - every few chunks
+        this.tryGenerateSafeZone(cx, cy, tiles);
+    }
+
+    tryGenerateSafeZone(cx, cy, tiles) {
+        // Skip center chunk (already has safe zone at 0,0)
+        if (cx === 0 && cy === 0) return;
+
+        // Generate safe zones with some spacing - roughly every 3-5 chunks
+        // Use perlin noise to determine if this chunk gets a safe zone
+        const noiseVal = this.perlin.octaveNoise(cx * 3.7, cy * 3.7, 2, 0.5);
+        const shouldHaveZone = noiseVal > 0.6;
+
+        if (!shouldHaveZone) return;
+
+        // Check that we don't have too many safe zones already
+        if (this.safeZones.length >= 15) return;
+
+        // Find a good spot for the safe zone center in this chunk
+        const centerTileX = cx * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);
+        const centerTileY = cy * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);
+
+        // Need a large empty area for the safe zone
+        const zoneRadius = TILE_SIZE * 4; // Slightly smaller than spawn zone
+        const checkRadius = Math.ceil(zoneRadius / TILE_SIZE) + 2;
+
+        if (!this.isAreaEmpty(centerTileX, centerTileY, zoneRadius)) return;
+
+        // Make sure this safe zone isn't too close to another one
+        const zoneWorldX = centerTileX * TILE_SIZE + TILE_SIZE / 2;
+        const zoneWorldY = centerTileY * TILE_SIZE + TILE_SIZE / 2;
+        for (const existing of this.safeZones) {
+            const dx = existing.x - zoneWorldX;
+            const dy = existing.y - zoneWorldY;
+            if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 15) return;
+        }
+
+        // Clear a larger area for the safe zone
+        for (let dy = -checkRadius; dy <= checkRadius; dy++) {
+            for (let dx = -checkRadius; dx <= checkRadius; dx++) {
+                const tx = centerTileX + dx;
+                const ty = centerTileY + dy;
+                const lx = ((tx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                const ly = ((ty % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                // Only clear tiles in this chunk
+                if (Math.floor(tx / CHUNK_SIZE) === cx && Math.floor(ty / CHUNK_SIZE) === cy) {
+                    if (ly >= 0 && ly < CHUNK_SIZE && lx >= 0 && lx < CHUNK_SIZE) {
+                        tiles[ly][lx] = TILE_EMPTY;
+                    }
+                }
+            }
+        }
+
+        // Create the safe zone
+        const safeZone = new SafeZone(zoneWorldX, zoneWorldY, zoneRadius);
+        this.safeZones.push(safeZone);
     }
 
     getTile(tileX, tileY) {

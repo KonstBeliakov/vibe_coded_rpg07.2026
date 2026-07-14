@@ -26,7 +26,6 @@ class Game {
         this.boss = null;
         this.bossLevelInterval = 5;
         this.bossAreas = [];
-        this.safeZoneRadius = TILE_SIZE * 5; // Safe zone radius around spawn (0,0)
         this.spawnBedX = spawnPos.x;
         this.spawnBedY = spawnPos.y;
         this.mouseX = 0;
@@ -506,8 +505,14 @@ class Game {
     }
 
     isInSafeZone(x, y) {
+        // Check spawn safe zone
         const dist = Math.sqrt(x * x + y * y);
-        return dist < this.safeZoneRadius;
+        if (dist < TILE_SIZE * 5) return true;
+        // Check all procedurally generated safe zones
+        for (const zone of this.tileMap.safeZones) {
+            if (zone.isInside(x, y)) return true;
+        }
+        return false;
     }
 
     spawnEnemy() {
@@ -712,13 +717,22 @@ class Game {
         }
 
         for (const enemy of this.enemies) {
-            // Push enemies out of safe zone
+            // Push enemies out of safe zones
+            // Check spawn safe zone
             const enemyDistFromSpawn = Math.sqrt(enemy.x * enemy.x + enemy.y * enemy.y);
-            if (enemyDistFromSpawn < this.safeZoneRadius) {
+            if (enemyDistFromSpawn < TILE_SIZE * 5) {
                 const angle = Math.atan2(enemy.y, enemy.x);
-                const pushDist = this.safeZoneRadius - enemyDistFromSpawn + 5;
+                const pushDist = TILE_SIZE * 5 - enemyDistFromSpawn + 5;
                 enemy.x += Math.cos(angle) * pushDist;
                 enemy.y += Math.sin(angle) * pushDist;
+            }
+            // Check all other safe zones
+            for (const zone of this.tileMap.safeZones) {
+                const result = zone.pushOut(enemy.x, enemy.y, 5);
+                if (result) {
+                    enemy.x = result.x;
+                    enemy.y = result.y;
+                }
             }
 
             enemy.update(this.player.x, this.player.y, this.tileMap);
@@ -943,20 +957,26 @@ class Game {
             }
         }
 
-        // Draw safe zone
+        // Draw safe zones
+        // Draw spawn safe zone
         ctx.save();
         ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.arc(offsetX, offsetY, this.safeZoneRadius, 0, Math.PI * 2);
+        ctx.arc(offsetX, offsetY, TILE_SIZE * 5, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = 'rgba(76, 175, 80, 0.05)';
         ctx.beginPath();
-        ctx.arc(offsetX, offsetY, this.safeZoneRadius, 0, Math.PI * 2);
+        ctx.arc(offsetX, offsetY, TILE_SIZE * 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+
+        // Draw all procedurally generated safe zones
+        for (const zone of this.tileMap.safeZones) {
+            zone.draw(ctx, offsetX, offsetY);
+        }
 
         // Draw merchant
         if (this.merchant) {
