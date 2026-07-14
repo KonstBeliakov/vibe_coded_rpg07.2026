@@ -535,6 +535,9 @@ class Game {
     }
 
     spawnEnemy() {
+        // Don't spawn enemies while player is in a safe zone
+        if (this.isInSafeZone(this.player.x, this.player.y)) return;
+
         // Limit enemies for performance
         if (this.enemies.length >= this.maxEnemies) return;
 
