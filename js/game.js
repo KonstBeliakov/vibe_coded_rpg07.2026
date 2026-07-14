@@ -1438,7 +1438,7 @@ class Game {
         }
 
         // UI text
-        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет`;
+        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет<br>${this.crafting.getResourceString()}`;
     }
 
     drawMinimap(ctx) {
