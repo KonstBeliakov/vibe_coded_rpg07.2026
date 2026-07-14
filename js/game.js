@@ -25,6 +25,7 @@ class Game {
         this.flowers = [];
         this.thornFlowers = [];
         this.rocks = [];
+        this.trees = [];
         this.webs = [];
         this.lavaPools = [];
         this.beds = [];
@@ -333,6 +334,23 @@ class Game {
                     this.crafting.addResource('stone', rock.stoneAmount);
                     this.audio.playHit();
                     this.particles.emit(rock.x, rock.y, '#9e9e9e', 6, 2, 15, 3);
+                }
+                break;
+            }
+        }
+
+        // Check trees (chop to get wood)
+        for (const tree of this.trees) {
+            if (tree.collected) continue;
+            const dx = tree.x - px;
+            const dy = tree.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= tree.interactRange) {
+                if (tree.chop(this.player)) {
+                    this.crafting.addResource('wood', tree.woodAmount);
+                    this.audio.playHit();
+                    const color = tree.isDead ? '#6d4c41' : '#388e3c';
+                    this.particles.emit(tree.x, tree.y, color, 8, 3, 20, 3);
                 }
                 break;
             }
@@ -852,6 +870,51 @@ class Game {
         }
     }
 
+    spawnTrees() {
+        // Spawn trees in default and mossy biomes near the player
+        if (this.trees.length >= 40) return; // Limit total trees
+
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Check tiles around the player
+        for (let dy = -8; dy <= 8; dy++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const tx = playerTileX + dx;
+                const ty = playerTileY + dy;
+
+                // Only check if this is default or mossy biome
+                const biome = this.tileMap.getBiome(tx, ty);
+                if (biome !== BIOME_DEFAULT && biome !== BIOME_MOSSY) continue;
+
+                // Don't place trees on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
+                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+
+                // Check if there's already a tree at this tile
+                let alreadyHasTree = false;
+                for (const t of this.trees) {
+                    const tx2 = Math.floor(t.x / TILE_SIZE);
+                    const ty2 = Math.floor(t.y / TILE_SIZE);
+                    if (tx2 === tx && ty2 === ty) {
+                        alreadyHasTree = true;
+                        break;
+                    }
+                }
+                if (alreadyHasTree) continue;
+
+                // Place tree with some randomness
+                if (Math.random() < 0.12) {
+                    // Default biome = dead tree, Mossy biome = living tree
+                    const isDead = biome === BIOME_DEFAULT;
+                    this.trees.push(new Tree(worldX, worldY, isDead));
+                }
+            }
+        }
+    }
+
     spawnChest() {
         // Find a random empty tile near the player
         for (let attempt = 0; attempt < 20; attempt++) {
@@ -1244,6 +1307,9 @@ class Game {
         // Spawn rocks in default and web biomes
         this.spawnRocks();
 
+        // Spawn trees in default and mossy biomes
+        this.spawnTrees();
+
         // Apply lava damage
         for (const lava of this.lavaPools) {
             lava.applyDamage(this.player, performance.now());
@@ -1382,6 +1448,11 @@ class Game {
         // Draw rocks
         for (const rock of this.rocks) {
             rock.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw trees
+        for (const tree of this.trees) {
+            tree.draw(ctx, offsetX, offsetY);
         }
 
         // Draw potions
