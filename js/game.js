@@ -46,6 +46,13 @@ class Game {
         this.xpToNextLevel = 50;
         this.playerGold = 0;
 
+        // Day/night cycle
+        this.gameTime = 0; // in ms
+        this.dayLength = 120000; // 2 minutes per full day/night cycle
+        this.nightStart = this.dayLength * 0.6; // night starts at 60% of cycle
+        this.nightEnd = this.dayLength * 0.9; // night ends at 90% of cycle
+        this.isNight = false;
+
         this.settings = new Settings();
         this.particles = new ParticleSystem();
         this.audio = new AudioSystem();
@@ -571,8 +578,15 @@ class Game {
         const dist = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
         // 1.0 at spawn (0-500px), increases slowly
         // dist=0 → 1.0, dist=1000 → 1.1, dist=3000 → 1.3, dist=10000 → 2.0
-        if (dist < 500) return 1.0;
-        return 1.0 + (dist - 500) / 10000;
+        let mult = 1.0;
+        if (dist >= 500) {
+            mult = 1.0 + (dist - 500) / 10000;
+        }
+        // Night modifier - enemies are stronger and faster
+        if (this.isNight) {
+            mult *= 1.5;
+        }
+        return mult;
     }
 
     isInSafeZone(x, y) {
@@ -1269,6 +1283,15 @@ class Game {
             this.damageFlashTimer -= dt;
         }
 
+        // Update day/night cycle
+        this.gameTime = (this.gameTime + dt) % this.dayLength;
+        const wasNight = this.isNight;
+        this.isNight = this.gameTime >= this.nightStart && this.gameTime < this.nightEnd;
+        if (this.isNight && !wasNight) {
+            // Night just started - show notification
+            this.particles.emit(this.player.x, this.player.y, '#1a237e', 15, 4, 30, 4);
+        }
+
         // Update hunger system
         this.player.updateHunger(dt);
 
@@ -1390,6 +1413,13 @@ class Game {
                     ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
                 }
             }
+        }
+
+        // Night overlay - dark blue tint when night
+        if (this.isNight) {
+            const nightAlpha = 0.3;
+            ctx.fillStyle = `rgba(10, 5, 30, ${nightAlpha})`;
+            ctx.fillRect(0, 0, this.width, this.height);
         }
 
         // Draw safe zones
@@ -1674,7 +1704,8 @@ class Game {
         // UI text
         const hungerPercent = Math.floor((this.player.hunger / this.player.maxHunger) * 100);
         const hungerIcon = hungerPercent > 50 ? '🍖' : hungerPercent > 20 ? '🍞' : '⚠️';
-        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет<br>${hungerIcon} Сытость: ${hungerPercent}%<br>${this.crafting.getResourceString()}`;
+        const timeIcon = this.isNight ? '🌙' : '☀️';
+        this.ui.innerHTML = `${timeIcon} ${this.isNight ? 'НОЧЬ' : 'ДЕНЬ'}<br>X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет<br>${hungerIcon} Сытость: ${hungerPercent}%<br>${this.crafting.getResourceString()}`;
     }
 
     drawMinimap(ctx) {
