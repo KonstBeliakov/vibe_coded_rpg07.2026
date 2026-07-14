@@ -97,6 +97,26 @@ const RECIPES = [
         },
         ingredients: { wood: 5, metal: 3 },
         description: 'Урон +10'
+    },
+    {
+        name: 'Кирка',
+        result: () => {
+            const item = new Item('Кирка', 5, 0, 'no_texture.png');
+            item.isPickaxe = true;
+            return item;
+        },
+        ingredients: { wood: 2, stone: 3 },
+        description: 'Быстрая добыча руды (+2 metal за удар)'
+    },
+    {
+        name: 'Топор',
+        result: () => {
+            const item = new Item('Топор', 5, 0, 'no_texture.png');
+            item.isAxe = true;
+            return item;
+        },
+        ingredients: { wood: 1, stone: 4 },
+        description: 'Быстрая рубка деревьев (+2 wood за удар)'
     }
 ];
 

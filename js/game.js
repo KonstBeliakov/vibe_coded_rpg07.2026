@@ -347,6 +347,8 @@ class Game {
         }
 
         // Check trees (chop to get wood)
+        const selectedItem = this.slots[this.selectedSlot];
+        const isAxe = selectedItem && selectedItem.isAxe;
         for (const tree of this.trees) {
             if (tree.collected) continue;
             const dx = tree.x - px;
@@ -354,7 +356,8 @@ class Game {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= tree.interactRange) {
                 if (tree.chop(this.player)) {
-                    this.crafting.addResource('wood', tree.woodAmount);
+                    const woodAmount = isAxe ? tree.woodAmount + 2 : tree.woodAmount;
+                    this.crafting.addResource('wood', woodAmount);
                     this.audio.playHit();
                     const color = tree.isDead ? '#6d4c41' : '#388e3c';
                     this.particles.emit(tree.x, tree.y, color, 8, 3, 20, 3);
@@ -1045,6 +1048,8 @@ class Game {
             }
 
             // Try to mine ore if attacking with melee weapon
+            const selectedItem = this.slots[this.selectedSlot];
+            const isPickaxe = selectedItem && selectedItem.isPickaxe;
             const oreRange = this.player.attackRange + 20;
             const playerTileX = Math.floor(this.player.x / TILE_SIZE);
             const playerTileY = Math.floor(this.player.y / TILE_SIZE);
@@ -1061,7 +1066,8 @@ class Game {
                         const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
                         if (dist <= oreRange) {
                             this.tileMap.mineOre(tx, ty);
-                            this.crafting.addResource('metal', 1);
+                            const metalAmount = isPickaxe ? 3 : 1;
+                            this.crafting.addResource('metal', metalAmount);
                             this.audio.playHit();
                             this.particles.emit(oreWorldX, oreWorldY, '#ffd54f', 8, 3, 20, 3);
                         }
