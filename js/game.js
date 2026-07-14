@@ -24,6 +24,7 @@ class Game {
         this.potions = [];
         this.flowers = [];
         this.webs = [];
+        this.lavaPools = [];
         this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
@@ -668,6 +669,49 @@ class Game {
         }
     }
 
+    spawnLavaPools() {
+        // Spawn lava pools in lava biome near the player
+        if (this.lavaPools.length >= 20) return; // Limit total lava pools
+
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Check tiles around the player for lava biome
+        for (let dy = -8; dy <= 8; dy++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const tx = playerTileX + dx;
+                const ty = playerTileY + dy;
+
+                // Only check if this is lava biome
+                if (this.tileMap.getBiome(tx, ty) !== BIOME_LAVA) continue;
+
+                // Don't place lava on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
+                // Check if there's already a lava pool at this tile
+                const worldX = tx * TILE_SIZE;
+                const worldY = ty * TILE_SIZE;
+                let alreadyHasLava = false;
+                for (const l of this.lavaPools) {
+                    const lx = Math.floor(l.x / TILE_SIZE);
+                    const ly = Math.floor(l.y / TILE_SIZE);
+                    if (lx === tx && ly === ty) {
+                        alreadyHasLava = true;
+                        break;
+                    }
+                }
+                if (alreadyHasLava) continue;
+
+                // Place lava pool with some randomness
+                if (Math.random() < 0.2) {
+                    // Create a small lava pool (1-2 tiles)
+                    const poolSize = Math.random() < 0.3 ? TILE_SIZE * 2 : TILE_SIZE;
+                    this.lavaPools.push(new LavaPool(worldX, worldY, poolSize));
+                }
+            }
+        }
+    }
+
     spawnFlowers() {
         // Spawn flowers in mossy biome near the player
         if (this.flowers.length >= 30) return; // Limit total flowers
@@ -1024,6 +1068,14 @@ class Game {
         // Spawn webs in web biome
         this.spawnWebs();
 
+        // Spawn lava pools in lava biome
+        this.spawnLavaPools();
+
+        // Apply lava damage
+        for (const lava of this.lavaPools) {
+            lava.applyDamage(this.player, performance.now());
+        }
+
         // Apply web slow effect
         let webSlow = 1.0;
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
@@ -1137,6 +1189,11 @@ class Game {
         // Draw webs
         for (const web of this.webs) {
             web.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw lava pools
+        for (const lava of this.lavaPools) {
+            lava.draw(ctx, offsetX, offsetY);
         }
 
         // Draw potions

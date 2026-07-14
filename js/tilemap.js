@@ -8,6 +8,7 @@ const CHUNK_SIZE = 16;
 const BIOME_NORMAL = 0;
 const BIOME_MOSSY = 1;
 const BIOME_WEB = 2;
+const BIOME_LAVA = 3;
 
 class TileMap {
     constructor(seed) {
@@ -24,8 +25,10 @@ class TileMap {
         const biomeNoise = this.perlin.octaveNoise(tileX * 0.03, tileY * 0.03, 2, 0.5);
         if (biomeNoise > 0.3 && biomeNoise < 0.5) {
             return BIOME_MOSSY;
-        } else if (biomeNoise >= 0.5) {
+        } else if (biomeNoise >= 0.5 && biomeNoise < 0.7) {
             return BIOME_WEB;
+        } else if (biomeNoise >= 0.7) {
+            return BIOME_LAVA;
         }
         return BIOME_NORMAL;
     }
@@ -201,6 +204,9 @@ class TileMap {
                             break;
                         case BIOME_WEB:
                             ctx.fillStyle = '#2a2a3a'; // Slightly blue-tinted dark floor
+                            break;
+                        case BIOME_LAVA:
+                            ctx.fillStyle = '#3a1a1a'; // Red-tinted dark floor for lava biome
                             break;
                         default:
                             ctx.fillStyle = '#2a2a2a'; // Normal dark floor
