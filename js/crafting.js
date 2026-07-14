@@ -117,6 +117,56 @@ const RECIPES = [
         },
         ingredients: { wood: 1, stone: 4 },
         description: 'Быстрая рубка деревьев (+2 wood за удар)'
+    },
+    // ========== Улучшение оружия (заточка) ==========
+    {
+        name: 'Заточка (+3 урона)',
+        result: () => 'upgrade_damage_3',
+        ingredients: { metal: 3, essence: 1 },
+        description: 'Увеличивает урон оружия на +3'
+    },
+    {
+        name: 'Заточка (+5 урона)',
+        result: () => 'upgrade_damage_5',
+        ingredients: { metal: 5, essence: 2 },
+        description: 'Увеличивает урон оружия на +5'
+    },
+    {
+        name: 'Заточка (+8 урона)',
+        result: () => 'upgrade_damage_8',
+        ingredients: { metal: 8, essence: 4 },
+        description: 'Увеличивает урон оружия на +8'
+    },
+    {
+        name: 'Увеличение радиуса (+5)',
+        result: () => 'upgrade_range_5',
+        ingredients: { metal: 3, essence: 2 },
+        description: 'Увеличивает радиус атаки на +5'
+    },
+    {
+        name: 'Увеличение радиуса (+10)',
+        result: () => 'upgrade_range_10',
+        ingredients: { metal: 6, essence: 4 },
+        description: 'Увеличивает радиус атаки на +10'
+    },
+    // ========== Добавление эффектов оружию ==========
+    {
+        name: 'Огненный эффект',
+        result: () => 'upgrade_fire',
+        ingredients: { essence: 5, metal: 3 },
+        description: 'Добавляет огненный эффект оружию'
+    },
+    {
+        name: 'Ледяной эффект',
+        result: () => 'upgrade_ice',
+        ingredients: { essence: 5, metal: 3 },
+        description: 'Добавляет ледяной эффект оружию'
+    },
+    {
+        name: 'Ядовитый эффект',
+        result: () => 'upgrade_poison',
+        ingredients: { essence: 5, metal: 3 },
+        description: 'Добавляет ядовитый эффект оружию'
     }
 ];
 

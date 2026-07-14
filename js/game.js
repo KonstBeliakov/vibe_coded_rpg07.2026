@@ -1751,6 +1751,41 @@ class Game {
             this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'health'));
         } else if (result === 'potion_speed') {
             this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'speed'));
+        } else if (result.startsWith('upgrade_')) {
+            // Apply upgrade to currently selected item
+            const selectedItem = this.slots[this.selectedSlot];
+            if (!selectedItem) {
+                this.audio.playPlayerHit();
+                return;
+            }
+
+            if (result === 'upgrade_damage_3') {
+                selectedItem.attackDamage += 3;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +3';
+            } else if (result === 'upgrade_damage_5') {
+                selectedItem.attackDamage += 5;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +5';
+            } else if (result === 'upgrade_damage_8') {
+                selectedItem.attackDamage += 8;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +8';
+            } else if (result === 'upgrade_range_5') {
+                selectedItem.attackRange += 5;
+                selectedItem.name += ' (дальн.)';
+            } else if (result === 'upgrade_range_10') {
+                selectedItem.attackRange += 10;
+                selectedItem.name += ' (дальн.+)';
+            } else if (result === 'upgrade_fire') {
+                selectedItem.arrowType = 'fire';
+                selectedItem.name = 'Огненный ' + selectedItem.name;
+            } else if (result === 'upgrade_ice') {
+                selectedItem.arrowType = 'ice';
+                selectedItem.name = 'Ледяной ' + selectedItem.name;
+            } else if (result === 'upgrade_poison') {
+                selectedItem.arrowType = 'poison';
+                selectedItem.name = 'Отравленный ' + selectedItem.name;
+            }
+
+            this.player.applyItemStats(this.slots[this.selectedSlot]);
         } else {
             // Put crafted item in first empty slot
             for (let i = 0; i < this.slots.length; i++) {
