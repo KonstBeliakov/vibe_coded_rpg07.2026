@@ -24,6 +24,7 @@ class Game {
         this.potions = [];
         this.flowers = [];
         this.thornFlowers = [];
+        this.rocks = [];
         this.webs = [];
         this.lavaPools = [];
         this.beds = [];
@@ -318,6 +319,22 @@ class Game {
                 potion.apply(this.player);
                 this.audio.playLevelUp();
                 this.particles.emit(potion.x, potion.y, potion.type === 'health' ? '#e53935' : '#42a5f5', 8, 3, 20, 3);
+            }
+        }
+
+        // Check rocks (collect to get stone)
+        for (const rock of this.rocks) {
+            if (rock.collected) continue;
+            const dx = rock.x - px;
+            const dy = rock.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= rock.interactRange) {
+                if (rock.interact(this.player)) {
+                    this.crafting.addResource('stone', rock.stoneAmount);
+                    this.audio.playHit();
+                    this.particles.emit(rock.x, rock.y, '#9e9e9e', 6, 2, 15, 3);
+                }
+                break;
             }
         }
     }
@@ -792,6 +809,49 @@ class Game {
         }
     }
 
+    spawnRocks() {
+        // Spawn rocks in default and web biomes near the player
+        if (this.rocks.length >= 40) return; // Limit total rocks
+
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Check tiles around the player
+        for (let dy = -8; dy <= 8; dy++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const tx = playerTileX + dx;
+                const ty = playerTileY + dy;
+
+                // Only check if this is default or web biome
+                const biome = this.tileMap.getBiome(tx, ty);
+                if (biome !== BIOME_DEFAULT && biome !== BIOME_WEB) continue;
+
+                // Don't place rocks on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
+                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+
+                // Check if there's already a rock at this tile
+                let alreadyHasRock = false;
+                for (const r of this.rocks) {
+                    const rx = Math.floor(r.x / TILE_SIZE);
+                    const ry = Math.floor(r.y / TILE_SIZE);
+                    if (rx === tx && ry === ty) {
+                        alreadyHasRock = true;
+                        break;
+                    }
+                }
+                if (alreadyHasRock) continue;
+
+                // Place rock with some randomness
+                if (Math.random() < 0.15) {
+                    this.rocks.push(new Rock(worldX, worldY));
+                }
+            }
+        }
+    }
+
     spawnChest() {
         // Find a random empty tile near the player
         for (let attempt = 0; attempt < 20; attempt++) {
@@ -1181,6 +1241,9 @@ class Game {
         // Spawn lava pools in lava biome
         this.spawnLavaPools();
 
+        // Spawn rocks in default and web biomes
+        this.spawnRocks();
+
         // Apply lava damage
         for (const lava of this.lavaPools) {
             lava.applyDamage(this.player, performance.now());
@@ -1314,6 +1377,11 @@ class Game {
         // Draw lava pools
         for (const lava of this.lavaPools) {
             lava.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw rocks
+        for (const rock of this.rocks) {
+            rock.draw(ctx, offsetX, offsetY);
         }
 
         // Draw potions
