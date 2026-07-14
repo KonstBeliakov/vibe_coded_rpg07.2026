@@ -30,11 +30,12 @@ class Enemy {
 
         if (!hasDirectPath && tileMap) {
             // Use A* pathfinding
-            if (!this.path || this.path.length === 0 ||
+            const pathNeedsUpdate = !this.path || this.path.length === 0 ||
                 Math.floor(this.path[this.path.length - 1].x / TILE_SIZE) !== playerTileX ||
-                Math.floor(this.path[this.path.length - 1].y / TILE_SIZE) !== playerTileY) {
+                Math.floor(this.path[this.path.length - 1].y / TILE_SIZE) !== playerTileY;
+            if (pathNeedsUpdate) {
                 // Recalculate path every 30 frames or when target moves
-                if (!this.pathTimer || this.pathTimer <= 0 || this.path.length === 0) {
+                if (!this.pathTimer || this.pathTimer <= 0) {
                     this.path = aStar(this.x, this.y, playerX, playerY, tileMap);
                     this.pathTimer = 30;
                 }
