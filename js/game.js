@@ -22,6 +22,7 @@ class Game {
         this.staffProjectiles = [];
         this.chests = [];
         this.potions = [];
+        this.flowers = [];
         this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
@@ -267,6 +268,21 @@ class Game {
                     this.spawnBedY = bed.y;
                     this.audio.playLevelUp();
                     this.particles.emit(bed.x, bed.y, '#66bb6a', 10, 3, 25, 4);
+                }
+                break;
+            }
+        }
+
+        // Check flowers
+        for (const flower of this.flowers) {
+            if (flower.collected) continue;
+            const dx = flower.x - px;
+            const dy = flower.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= flower.interactRange) {
+                if (flower.interact(this.player)) {
+                    this.audio.playLevelUp();
+                    this.particles.emit(flower.x, flower.y, '#42a5f5', 8, 3, 20, 3);
                 }
                 break;
             }
@@ -596,6 +612,47 @@ class Game {
         this.enemies.push(enemy);
     }
 
+    spawnFlowers() {
+        // Spawn flowers in mossy biome near the player
+        if (this.flowers.length >= 30) return; // Limit total flowers
+
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Check tiles around the player for mossy biome
+        for (let dy = -8; dy <= 8; dy++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const tx = playerTileX + dx;
+                const ty = playerTileY + dy;
+
+                // Only check if this is mossy biome
+                if (this.tileMap.getBiome(tx, ty) !== BIOME_MOSSY) continue;
+
+                // Check if there's already a flower at this tile
+                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+                let alreadyHasFlower = false;
+                for (const f of this.flowers) {
+                    const fx = Math.floor(f.x / TILE_SIZE);
+                    const fy = Math.floor(f.y / TILE_SIZE);
+                    if (fx === tx && fy === ty) {
+                        alreadyHasFlower = true;
+                        break;
+                    }
+                }
+                if (alreadyHasFlower) continue;
+
+                // Don't place flowers on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
+                // Place flower with some randomness (not every tile)
+                if (Math.random() < 0.15) {
+                    this.flowers.push(new Flower(worldX, worldY));
+                }
+            }
+        }
+    }
+
     spawnChest() {
         // Find a random empty tile near the player
         for (let attempt = 0; attempt < 20; attempt++) {
@@ -902,6 +959,9 @@ class Game {
             }
         }
 
+        // Spawn flowers in mossy biome
+        this.spawnFlowers();
+
         // Update achievements
         this.achievements.addLevel(this.playerLevel);
         const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
@@ -991,6 +1051,11 @@ class Game {
         // Draw chests
         for (const chest of this.chests) {
             chest.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw flowers
+        for (const flower of this.flowers) {
+            flower.draw(ctx, offsetX, offsetY);
         }
 
         // Draw potions
