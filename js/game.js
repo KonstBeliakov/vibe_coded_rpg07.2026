@@ -40,6 +40,7 @@ class Game {
         this.playerXP = 0;
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
+        this.playerGold = 0;
 
         this.settings = new Settings();
         this.particles = new ParticleSystem();
@@ -772,6 +773,9 @@ class Game {
                         this.achievements.addKill();
                         this.audio.playEnemyDeath();
                         this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
+                        // Drop gold
+                        const goldDrop = Math.floor(2 + Math.random() * 4 + this.playerLevel * 0.5);
+                        this.playerGold += goldDrop;
                         this.enemies.splice(i, 1);
                     }
                 }
@@ -1349,7 +1353,7 @@ class Game {
         }
 
         // UI text
-        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}`;
+        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет`;
     }
 
     drawMinimap(ctx) {
@@ -1604,7 +1608,7 @@ class Game {
         if (!this.merchant) return;
         const container = document.getElementById('merchantStock');
         container.innerHTML = '';
-        document.getElementById('merchantGold').textContent = this.merchant.gold;
+        document.getElementById('merchantGold').textContent = this.playerGold;
 
         for (let i = 0; i < this.merchant.stock.length; i++) {
             const item = this.merchant.stock[i];
@@ -1628,11 +1632,13 @@ class Game {
 
     buyFromMerchant(index) {
         if (!this.merchant) return;
-        const result = this.merchant.buyItem(index, this.slots);
+        const result = this.merchant.buyItem(index, this.slots, this.playerGold);
         if (!result) {
             this.audio.playPlayerHit();
             return;
         }
+
+        this.playerGold -= result.cost;
 
         if (result.type === 'potion') {
             const type = result.potionType;
@@ -1649,7 +1655,9 @@ class Game {
         const item = this.slots[this.selectedSlot];
         if (!item) return;
 
-        if (this.merchant.sellItem(item, this.slots)) {
+        const value = this.merchant.sellItem(item);
+        if (value > 0) {
+            this.playerGold += value;
             this.slots[this.selectedSlot] = null;
             this.player.applyItemStats(this.slots[this.selectedSlot]);
             this.renderMerchantUI();

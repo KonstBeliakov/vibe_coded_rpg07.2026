@@ -6,7 +6,6 @@ class Merchant {
         this.size = 28;
         this.interactRange = 45;
         this.stock = this.generateStock();
-        this.gold = 0; // Player gold tracked here for simplicity
     }
 
     generateStock() {
@@ -36,10 +35,10 @@ class Merchant {
         return items;
     }
 
-    buyItem(index, slots) {
+    buyItem(index, slots, playerGold) {
         if (index < 0 || index >= this.stock.length) return null;
         const item = this.stock[index];
-        if (this.gold < item.cost) return null;
+        if (playerGold < item.cost) return null;
 
         // Find empty slot
         let emptySlot = -1;
@@ -51,29 +50,24 @@ class Merchant {
         }
         if (emptySlot === -1) return null; // Inventory full
 
-        this.gold -= item.cost;
-
-        let newItem;
         if (item.type === 'potion_health' || item.type === 'potion_speed') {
             // Potions are handled differently - just return the type
-            return { type: 'potion', potionType: item.type === 'potion_health' ? 'health' : 'speed', slot: emptySlot };
+            return { type: 'potion', potionType: item.type === 'potion_health' ? 'health' : 'speed', slot: emptySlot, cost: item.cost };
         } else {
             const damage = item.damage || 10;
             const range = item.range || 10;
-            newItem = new Item(item.name, damage, range, 'no_texture.png');
+            const newItem = new Item(item.name, damage, range, 'no_texture.png');
             slots[emptySlot] = newItem;
-            return { type: 'item', item: newItem, slot: emptySlot };
+            return { type: 'item', item: newItem, slot: emptySlot, cost: item.cost };
         }
     }
 
-    sellItem(item, slots) {
-        if (!item) return false;
+    sellItem(item) {
+        if (!item) return 0;
         // Don't allow selling starter items
-        if (item.name === 'Меч' || item.name === 'Лук') return false;
+        if (item.name === 'Меч' || item.name === 'Лук') return 0;
 
-        const value = Math.max(5, Math.floor((item.attackDamage + item.attackRange) * 1.5));
-        this.gold += value;
-        return true;
+        return Math.max(5, Math.floor((item.attackDamage + item.attackRange) * 1.5));
     }
 
     draw(ctx, offsetX, offsetY) {
