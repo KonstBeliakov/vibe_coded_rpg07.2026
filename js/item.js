@@ -1,13 +1,40 @@
+// ========== Rarity System ==========
+const RARITY = {
+    common: { name: 'Обычный', color: '#9e9e9e', glowColor: 'rgba(158,158,158,0.3)', damageMult: 0.8, rangeMult: 0.8 },
+    rare: { name: 'Редкий', color: '#42a5f5', glowColor: 'rgba(66,165,245,0.4)', damageMult: 1.2, rangeMult: 1.2 },
+    legendary: { name: 'Легендарный', color: '#ffd700', glowColor: 'rgba(255,215,0,0.5)', damageMult: 1.8, rangeMult: 1.6 }
+};
+
+function getRarityForDistance(distanceFromSpawn) {
+    const roll = Math.random();
+    if (distanceFromSpawn > 3000 && roll < 0.15) return 'legendary';
+    if (distanceFromSpawn > 1000 && roll < 0.35) return 'rare';
+    return 'common';
+}
+
 // ========== Item ==========
 class Item {
-    constructor(name, attackDamage, attackRange, texturePath) {
+    constructor(name, attackDamage, attackRange, texturePath, rarity = 'common') {
         this.name = name;
         this.attackDamage = attackDamage;
         this.attackRange = attackRange;
+        this.rarity = rarity;
         this.texture = new Image();
         this.texture.src = texturePath;
         this.loaded = false;
         this.texture.onload = () => { this.loaded = true; };
+    }
+
+    getRarityColor() {
+        return RARITY[this.rarity]?.color || '#9e9e9e';
+    }
+
+    getRarityGlow() {
+        return RARITY[this.rarity]?.glowColor || 'rgba(158,158,158,0.3)';
+    }
+
+    getRarityName() {
+        return RARITY[this.rarity]?.name || 'Обычный';
     }
 
     static generateWeapon(distanceFromSpawn) {
@@ -34,11 +61,16 @@ class Item {
         const damage = Math.floor((baseDamage + Math.random() * 10) * quality * damageMult);
         const range = Math.floor((baseRange + Math.random() * 15) * quality * rangeMult);
 
-        // Generate name based on quality
-        let prefix = '';
-        if (quality > 1.8) prefix = 'Легендарный ';
-        else if (quality > 1.4) prefix = 'Редкий ';
-        else if (quality > 1.1) prefix = 'Хороший ';
+        // Determine rarity
+        const rarity = getRarityForDistance(distanceFromSpawn);
+        const rarityData = RARITY[rarity];
+
+        // Apply rarity multipliers
+        const finalDamage = Math.floor(damage * rarityData.damageMult);
+        const finalRange = Math.floor(range * rarityData.rangeMult);
+
+        // Generate name based on rarity
+        let prefix = rarityData.name + ' ';
 
         let name;
         let arrowType = 'normal';
@@ -63,7 +95,7 @@ class Item {
             name = `${prefix}Меч`;
         }
 
-        const item = new Item(name, damage, range, 'no_texture.png');
+        const item = new Item(name, finalDamage, finalRange, 'no_texture.png', rarity);
         item.arrowType = arrowType;
         return item;
     }

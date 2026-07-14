@@ -12,20 +12,20 @@ const RESOURCES = {
 const RECIPES = [
     {
         name: 'Меч',
-        result: () => new Item('Меч', 10, 10, 'no_texture.png'),
+        result: () => new Item('Меч', 10, 10, 'no_texture.png', 'common'),
         ingredients: { wood: 2, metal: 3 },
         description: 'Стандартный меч'
     },
     {
         name: 'Лук',
-        result: () => new Item('Лук', 5, 0, 'no_texture.png'),
+        result: () => new Item('Лук', 5, 0, 'no_texture.png', 'common'),
         ingredients: { wood: 4, stone: 1 },
         description: 'Стандартный лук'
     },
     {
         name: 'Посох',
         result: () => {
-            const item = new Item('Посох', 8, 0, 'no_texture.png');
+            const item = new Item('Посох', 8, 0, 'no_texture.png', 'common');
             return item;
         },
         ingredients: { wood: 3, essence: 2 },
