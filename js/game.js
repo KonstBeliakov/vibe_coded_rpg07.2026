@@ -46,6 +46,9 @@ class Game {
         this.xpToNextLevel = 50;
         this.playerGold = 0;
 
+        // Spawner module
+        this.spawner = new Spawner(this);
+
         // Day/night cycle
         this.gameTime = 0; // in ms
         this.dayLength = 120000; // 2 minutes per full day/night cycle
@@ -508,41 +511,7 @@ class Game {
 
             // Spawn boss area every N levels
             if (this.playerLevel % this.bossLevelInterval === 0) {
-                this.spawnBossArea();
-            }
-        }
-    }
-
-    spawnBossArea() {
-        // Find a location far from the player for the boss area
-        const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
-        const minDist = Math.max(300, distFromSpawn + 200);
-
-        for (let attempt = 0; attempt < 30; attempt++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = minDist + Math.random() * 200;
-            const bx = Math.cos(angle) * radius;
-            const by = Math.sin(angle) * radius;
-            const tileX = Math.floor(bx / TILE_SIZE);
-            const tileY = Math.floor(by / TILE_SIZE);
-
-            if (!this.tileMap.isWall(tileX, tileY)) {
-                // Check not too close to existing boss areas
-                let tooClose = false;
-                for (const area of this.bossAreas) {
-                    const dx = area.x - bx;
-                    const dy = area.y - by;
-                    if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 8) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-                if (!tooClose) {
-                    const cx = tileX * TILE_SIZE + TILE_SIZE / 2;
-                    const cy = tileY * TILE_SIZE + TILE_SIZE / 2;
-                    this.bossAreas.push(new BossArea(cx, cy, this.playerLevel));
-                    return;
-                }
+                this.spawner.spawnBossArea();
             }
         }
     }
@@ -712,312 +681,6 @@ class Game {
         this.enemies.push(enemy);
     }
 
-    spawnWebs() {
-        // Spawn webs in web biome near the player
-        if (this.webs.length >= 50) return; // Limit total webs
-
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-
-        // Check tiles around the player for web biome
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
-                const tx = playerTileX + dx;
-                const ty = playerTileY + dy;
-
-                // Only check if this is web biome
-                if (this.tileMap.getBiome(tx, ty) !== BIOME_WEB) continue;
-
-                // Don't place webs on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
-
-                // Check if there's already a web at this tile
-                const worldX = tx * TILE_SIZE;
-                const worldY = ty * TILE_SIZE;
-                let alreadyHasWeb = false;
-                for (const w of this.webs) {
-                    const wx = Math.floor(w.x / TILE_SIZE);
-                    const wy = Math.floor(w.y / TILE_SIZE);
-                    if (wx === tx && wy === ty) {
-                        alreadyHasWeb = true;
-                        break;
-                    }
-                }
-                if (alreadyHasWeb) continue;
-
-                // Place web near walls with some randomness
-                // Check if adjacent to a wall
-                let nearWall = false;
-                for (let wy = -1; wy <= 1; wy++) {
-                    for (let wx = -1; wx <= 1; wx++) {
-                        if (wx === 0 && wy === 0) continue;
-                        if (this.tileMap.isWall(tx + wx, ty + wy)) {
-                            nearWall = true;
-                            break;
-                        }
-                    }
-                    if (nearWall) break;
-                }
-
-                if (nearWall && Math.random() < 0.4) {
-                    this.webs.push(new Web(worldX, worldY));
-                }
-            }
-        }
-    }
-
-    spawnLavaPools() {
-        // Spawn lava pools in lava biome near the player
-        if (this.lavaPools.length >= 20) return; // Limit total lava pools
-
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-
-        // Check tiles around the player for lava biome
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
-                const tx = playerTileX + dx;
-                const ty = playerTileY + dy;
-
-                // Only check if this is lava biome
-                if (this.tileMap.getBiome(tx, ty) !== BIOME_LAVA) continue;
-
-                // Don't place lava on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
-
-                // Check if there's already a lava pool at this tile
-                const worldX = tx * TILE_SIZE;
-                const worldY = ty * TILE_SIZE;
-                let alreadyHasLava = false;
-                for (const l of this.lavaPools) {
-                    const lx = Math.floor(l.x / TILE_SIZE);
-                    const ly = Math.floor(l.y / TILE_SIZE);
-                    if (lx === tx && ly === ty) {
-                        alreadyHasLava = true;
-                        break;
-                    }
-                }
-                if (alreadyHasLava) continue;
-
-                // Place lava pool with some randomness
-                if (Math.random() < 0.2) {
-                    // Create a small lava pool (1-2 tiles)
-                    const poolSize = Math.random() < 0.3 ? TILE_SIZE * 2 : TILE_SIZE;
-                    this.lavaPools.push(new LavaPool(worldX, worldY, poolSize));
-                }
-            }
-        }
-    }
-
-    spawnFlowers() {
-        // Spawn flowers in mossy biome near the player
-        if (this.flowers.length >= 60) return; // Limit total flowers
-        if (this.thornFlowers.length >= 30) return; // Limit total thorn flowers
-
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-
-        // Check tiles around the player for mossy biome
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
-                const tx = playerTileX + dx;
-                const ty = playerTileY + dy;
-
-                // Only check if this is mossy biome
-                if (this.tileMap.getBiome(tx, ty) !== BIOME_MOSSY) continue;
-
-                // Don't place flowers on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
-
-                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
-                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
-
-                // Check if there's already a blue flower at this tile
-                let alreadyHasFlower = false;
-                for (const f of this.flowers) {
-                    const fx = Math.floor(f.x / TILE_SIZE);
-                    const fy = Math.floor(f.y / TILE_SIZE);
-                    if (fx === tx && fy === ty) {
-                        alreadyHasFlower = true;
-                        break;
-                    }
-                }
-                if (alreadyHasFlower) continue;
-
-                // Check if there's already a thorn flower at this tile
-                let alreadyHasThorn = false;
-                for (const f of this.thornFlowers) {
-                    const fx = Math.floor(f.x / TILE_SIZE);
-                    const fy = Math.floor(f.y / TILE_SIZE);
-                    if (fx === tx && fy === ty) {
-                        alreadyHasThorn = true;
-                        break;
-                    }
-                }
-                if (alreadyHasThorn) continue;
-
-                // Place flower with some randomness (not every tile)
-                if (Math.random() < 0.4) {
-                    // 70% chance blue flower, 30% chance thorn flower
-                    if (Math.random() < 0.7) {
-                        this.flowers.push(new Flower(worldX, worldY));
-                    } else {
-                        this.thornFlowers.push(new ThornFlower(worldX, worldY));
-                    }
-                }
-            }
-        }
-    }
-
-    spawnRocks() {
-        // Spawn rocks in default and web biomes near the player
-        if (this.rocks.length >= 40) return; // Limit total rocks
-
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-
-        // Check tiles around the player
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
-                const tx = playerTileX + dx;
-                const ty = playerTileY + dy;
-
-                // Only check if this is default or web biome
-                const biome = this.tileMap.getBiome(tx, ty);
-                if (biome !== BIOME_DEFAULT && biome !== BIOME_WEB) continue;
-
-                // Don't place rocks on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
-
-                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
-                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
-
-                // Check if there's already a rock at this tile
-                let alreadyHasRock = false;
-                for (const r of this.rocks) {
-                    const rx = Math.floor(r.x / TILE_SIZE);
-                    const ry = Math.floor(r.y / TILE_SIZE);
-                    if (rx === tx && ry === ty) {
-                        alreadyHasRock = true;
-                        break;
-                    }
-                }
-                if (alreadyHasRock) continue;
-
-                // Place rock with some randomness
-                if (Math.random() < 0.15) {
-                    this.rocks.push(new Rock(worldX, worldY));
-                }
-            }
-        }
-    }
-
-    spawnTrees() {
-        // Spawn trees in default and mossy biomes near the player
-        if (this.trees.length >= 40) return; // Limit total trees
-
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-
-        // Check tiles around the player
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
-                const tx = playerTileX + dx;
-                const ty = playerTileY + dy;
-
-                // Only check if this is default or mossy biome
-                const biome = this.tileMap.getBiome(tx, ty);
-                if (biome !== BIOME_DEFAULT && biome !== BIOME_MOSSY) continue;
-
-                // Don't place trees on walls
-                if (this.tileMap.isWall(tx, ty)) continue;
-
-                const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
-                const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
-
-                // Check if there's already a tree at this tile
-                let alreadyHasTree = false;
-                for (const t of this.trees) {
-                    const tx2 = Math.floor(t.x / TILE_SIZE);
-                    const ty2 = Math.floor(t.y / TILE_SIZE);
-                    if (tx2 === tx && ty2 === ty) {
-                        alreadyHasTree = true;
-                        break;
-                    }
-                }
-                if (alreadyHasTree) continue;
-
-                // Place tree with some randomness
-                if (Math.random() < 0.12) {
-                    // Default biome = dead tree, Mossy biome = living tree
-                    const isDead = biome === BIOME_DEFAULT;
-                    this.trees.push(new Tree(worldX, worldY, isDead));
-                }
-            }
-        }
-    }
-
-    spawnChest() {
-        // Find a random empty tile near the player
-        for (let attempt = 0; attempt < 20; attempt++) {
-            const tx = Math.floor(this.player.x / TILE_SIZE) + Math.floor((Math.random() - 0.5) * 20);
-            const ty = Math.floor(this.player.y / TILE_SIZE) + Math.floor((Math.random() - 0.5) * 20);
-            if (!this.tileMap.isWall(tx, ty)) {
-                const cx = tx * TILE_SIZE + TILE_SIZE / 2;
-                const cy = ty * TILE_SIZE + TILE_SIZE / 2;
-                // Check not too close to player
-                const dx = cx - this.player.x;
-                const dy = cy - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) > 100) {
-                    this.chests.push(new Chest(cx, cy));
-                    break;
-                }
-            }
-        }
-    }
-
-    ensureSafeZoneFurniture() {
-        // Ensure each procedurally generated safe zone has a bed and storage chest
-        for (const zone of this.tileMap.safeZones) {
-            // Check if this zone already has a bed nearby
-            let hasBed = false;
-            for (const bed of this.beds) {
-                const dx = bed.x - zone.x;
-                const dy = bed.y - zone.y;
-                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
-                    hasBed = true;
-                    break;
-                }
-            }
-
-            if (!hasBed) {
-                // Find an empty tile near the zone center for the bed
-                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
-                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
-                const bedPos = this.tileMap.findEmptyTile(zoneTileX, zoneTileY, 3);
-                this.beds.push(new Bed(bedPos.x, bedPos.y));
-            }
-
-            // Check if this zone already has a storage chest nearby
-            let hasChest = false;
-            for (const chest of this.chests) {
-                if (!chest.isStorage) continue;
-                const dx = chest.x - zone.x;
-                const dy = chest.y - zone.y;
-                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
-                    hasChest = true;
-                    break;
-                }
-            }
-
-            if (!hasChest) {
-                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
-                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
-                const chestPos = this.tileMap.findEmptyTile(zoneTileX, zoneTileY, 4);
-                this.chests.push(new Chest(chestPos.x, chestPos.y, true));
-            }
-        }
-    }
 
     playerAttack() {
         if (!this.player.attack()) return;
@@ -1345,27 +1008,27 @@ class Game {
         if (this.chestSpawnTimer >= this.chestSpawnInterval) {
             this.chestSpawnTimer = 0;
             if (this.chests.length < 5) {
-                this.spawnChest();
+                this.spawner.spawnChest();
             }
         }
 
         // Ensure each safe zone has a bed and storage chest
-        this.ensureSafeZoneFurniture();
+        this.spawner.ensureSafeZoneFurniture();
 
         // Spawn flowers in mossy biome
-        this.spawnFlowers();
+        this.spawner.spawnFlowers();
 
         // Spawn webs in web biome
-        this.spawnWebs();
+        this.spawner.spawnWebs();
 
         // Spawn lava pools in lava biome
-        this.spawnLavaPools();
+        this.spawner.spawnLavaPools();
 
         // Spawn rocks in default and web biomes
-        this.spawnRocks();
+        this.spawner.spawnRocks();
 
         // Spawn trees in default and mossy biomes
-        this.spawnTrees();
+        this.spawner.spawnTrees();
 
         // Apply lava damage
         for (const lava of this.lavaPools) {
