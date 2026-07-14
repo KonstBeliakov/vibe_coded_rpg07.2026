@@ -775,6 +775,49 @@ class Game {
         }
     }
 
+    ensureSafeZoneFurniture() {
+        // Ensure each procedurally generated safe zone has a bed and storage chest
+        for (const zone of this.tileMap.safeZones) {
+            // Check if this zone already has a bed nearby
+            let hasBed = false;
+            for (const bed of this.beds) {
+                const dx = bed.x - zone.x;
+                const dy = bed.y - zone.y;
+                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
+                    hasBed = true;
+                    break;
+                }
+            }
+
+            if (!hasBed) {
+                // Find an empty tile near the zone center for the bed
+                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
+                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
+                const bedPos = this.tileMap.findEmptyTile(zoneTileX, zoneTileY, 3);
+                this.beds.push(new Bed(bedPos.x, bedPos.y));
+            }
+
+            // Check if this zone already has a storage chest nearby
+            let hasChest = false;
+            for (const chest of this.chests) {
+                if (!chest.isStorage) continue;
+                const dx = chest.x - zone.x;
+                const dy = chest.y - zone.y;
+                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
+                    hasChest = true;
+                    break;
+                }
+            }
+
+            if (!hasChest) {
+                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
+                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
+                const chestPos = this.tileMap.findEmptyTile(zoneTileX, zoneTileY, 4);
+                this.chests.push(new Chest(chestPos.x, chestPos.y, true));
+            }
+        }
+    }
+
     playerAttack() {
         if (!this.player.attack()) return;
 
@@ -1089,6 +1132,9 @@ class Game {
                 this.spawnChest();
             }
         }
+
+        // Ensure each safe zone has a bed and storage chest
+        this.ensureSafeZoneFurniture();
 
         // Spawn flowers in mossy biome
         this.spawnFlowers();
