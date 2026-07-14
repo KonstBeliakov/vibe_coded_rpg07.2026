@@ -7,6 +7,7 @@ class Game {
         this.deathScreen = document.getElementById('deathScreen');
         this.deathStats = document.getElementById('deathStats');
         this.restartBtn = document.getElementById('restartBtn');
+        this.resizeCanvas();
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         this.keys = {};
@@ -168,6 +169,13 @@ class Game {
             this.mouseY = e.clientY;
         });
 
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+        });
+
         // Auto-save every 10 seconds
         setInterval(() => this.saveGame(), 10000);
 
@@ -175,6 +183,11 @@ class Game {
         this.lastTime = performance.now();
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
+    }
+
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
     }
 
     interact() {
