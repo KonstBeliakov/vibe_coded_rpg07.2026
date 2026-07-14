@@ -7,6 +7,7 @@ const CHUNK_SIZE = 16;
 // Biome types
 const BIOME_NORMAL = 0;
 const BIOME_MOSSY = 1;
+const BIOME_WEB = 2;
 
 class TileMap {
     constructor(seed) {
@@ -21,8 +22,10 @@ class TileMap {
     getBiome(tileX, tileY) {
         // Use a different noise scale for biome generation
         const biomeNoise = this.perlin.octaveNoise(tileX * 0.03, tileY * 0.03, 2, 0.5);
-        if (biomeNoise > 0.3) {
+        if (biomeNoise > 0.3 && biomeNoise < 0.5) {
             return BIOME_MOSSY;
+        } else if (biomeNoise >= 0.5) {
+            return BIOME_WEB;
         }
         return BIOME_NORMAL;
     }
@@ -195,6 +198,9 @@ class TileMap {
                     switch (biome) {
                         case BIOME_MOSSY:
                             ctx.fillStyle = '#1a3a1a'; // Dark green mossy floor
+                            break;
+                        case BIOME_WEB:
+                            ctx.fillStyle = '#2a2a3a'; // Slightly blue-tinted dark floor
                             break;
                         default:
                             ctx.fillStyle = '#2a2a2a'; // Normal dark floor

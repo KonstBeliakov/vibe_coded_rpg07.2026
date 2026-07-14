@@ -20,6 +20,7 @@ class Player {
         this.isMoving = false;
         this.facingAngle = 0;
         this.invulnerable = false;
+        this.speedMultiplier = 1.0;
     }
 
     applyItemStats(item) {
@@ -51,8 +52,8 @@ class Player {
             this.walkTimer += 0.15;
         }
 
-        this.x += dx * this.speed;
-        this.y += dy * this.speed;
+        this.x += dx * this.speed * this.speedMultiplier;
+        this.y += dy * this.speed * this.speedMultiplier;
 
         if (this.attackTimer > 0) this.attackTimer -= 16;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;

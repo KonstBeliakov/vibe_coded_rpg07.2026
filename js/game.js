@@ -23,6 +23,7 @@ class Game {
         this.chests = [];
         this.potions = [];
         this.flowers = [];
+        this.webs = [];
         this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
@@ -612,6 +613,60 @@ class Game {
         this.enemies.push(enemy);
     }
 
+    spawnWebs() {
+        // Spawn webs in web biome near the player
+        if (this.webs.length >= 50) return; // Limit total webs
+
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
+        // Check tiles around the player for web biome
+        for (let dy = -8; dy <= 8; dy++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const tx = playerTileX + dx;
+                const ty = playerTileY + dy;
+
+                // Only check if this is web biome
+                if (this.tileMap.getBiome(tx, ty) !== BIOME_WEB) continue;
+
+                // Don't place webs on walls
+                if (this.tileMap.isWall(tx, ty)) continue;
+
+                // Check if there's already a web at this tile
+                const worldX = tx * TILE_SIZE;
+                const worldY = ty * TILE_SIZE;
+                let alreadyHasWeb = false;
+                for (const w of this.webs) {
+                    const wx = Math.floor(w.x / TILE_SIZE);
+                    const wy = Math.floor(w.y / TILE_SIZE);
+                    if (wx === tx && wy === ty) {
+                        alreadyHasWeb = true;
+                        break;
+                    }
+                }
+                if (alreadyHasWeb) continue;
+
+                // Place web near walls with some randomness
+                // Check if adjacent to a wall
+                let nearWall = false;
+                for (let wy = -1; wy <= 1; wy++) {
+                    for (let wx = -1; wx <= 1; wx++) {
+                        if (wx === 0 && wy === 0) continue;
+                        if (this.tileMap.isWall(tx + wx, ty + wy)) {
+                            nearWall = true;
+                            break;
+                        }
+                    }
+                    if (nearWall) break;
+                }
+
+                if (nearWall && Math.random() < 0.4) {
+                    this.webs.push(new Web(worldX, worldY));
+                }
+            }
+        }
+    }
+
     spawnFlowers() {
         // Spawn flowers in mossy biome near the player
         if (this.flowers.length >= 30) return; // Limit total flowers
@@ -962,19 +1017,36 @@ class Game {
         // Spawn flowers in mossy biome
         this.spawnFlowers();
 
+        // Spawn webs in web biome
+        this.spawnWebs();
+
+        // Apply web slow effect
+        let webSlow = 1.0;
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+        for (const web of this.webs) {
+            const webTileX = Math.floor(web.x / TILE_SIZE);
+            const webTileY = Math.floor(web.y / TILE_SIZE);
+            if (webTileX === playerTileX && webTileY === playerTileY) {
+                webSlow = web.slowFactor;
+                break;
+            }
+        }
+        this.player.speedMultiplier = webSlow;
+
         // Update achievements
         this.achievements.addLevel(this.playerLevel);
         const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);
         this.achievements.updateDistance(distFromSpawn);
 
         // Update fog of war
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+        const fogTileX = Math.floor(this.player.x / TILE_SIZE);
+        const fogTileY = Math.floor(this.player.y / TILE_SIZE);
         for (let dy = -this.fogRevealRadius; dy <= this.fogRevealRadius; dy++) {
             for (let dx = -this.fogRevealRadius; dx <= this.fogRevealRadius; dx++) {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist <= this.fogRevealRadius) {
-                    this.exploredTiles.add(`${playerTileX + dx},${playerTileY + dy}`);
+                    this.exploredTiles.add(`${fogTileX + dx},${fogTileY + dy}`);
                 }
             }
         }
@@ -1056,6 +1128,11 @@ class Game {
         // Draw flowers
         for (const flower of this.flowers) {
             flower.draw(ctx, offsetX, offsetY);
+        }
+
+        // Draw webs
+        for (const web of this.webs) {
+            web.draw(ctx, offsetX, offsetY);
         }
 
         // Draw potions
