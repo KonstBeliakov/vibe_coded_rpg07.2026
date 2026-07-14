@@ -1269,6 +1269,9 @@ class Game {
             this.damageFlashTimer -= dt;
         }
 
+        // Update hunger system
+        this.player.updateHunger(dt);
+
         // Update skills
         for (const slot of this.skills) {
             slot.skill.update(dt, this.player, this);
@@ -1669,7 +1672,9 @@ class Game {
         }
 
         // UI text
-        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет<br>${this.crafting.getResourceString()}`;
+        const hungerPercent = Math.floor((this.player.hunger / this.player.maxHunger) * 100);
+        const hungerIcon = hungerPercent > 50 ? '🍖' : hungerPercent > 20 ? '🍞' : '⚠️';
+        this.ui.innerHTML = `X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)}<br>Lv.${this.playerLevel} XP: ${this.playerXP}/${this.xpToNextLevel}<br>💰 ${this.playerGold} монет<br>${hungerIcon} Сытость: ${hungerPercent}%<br>${this.crafting.getResourceString()}`;
     }
 
     drawMinimap(ctx) {

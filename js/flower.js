@@ -14,6 +14,10 @@ class Flower {
         if (this.collected) return false;
         this.collected = true;
         player.health = Math.min(player.health + this.healAmount, player.maxHealth);
+        // Also restore some hunger
+        if (player.eat) {
+            player.eat(15);
+        }
         return true;
     }
 

@@ -21,6 +21,14 @@ class Player {
         this.facingAngle = 0;
         this.invulnerable = false;
         this.speedMultiplier = 1.0;
+        // Hunger system
+        this.maxHunger = 100;
+        this.hunger = this.maxHunger;
+        this.hungerDrainRate = 0.5; // per second at normal activity
+        this.hungerDamageThreshold = 20; // below this, start taking damage
+        this.hungerDamageRate = 2; // damage per second when starving
+        this.healthRegenRate = 2; // HP per second when well-fed (hunger > 50)
+        this.healthRegenThreshold = 50;
     }
 
     applyItemStats(item) {
@@ -61,6 +69,32 @@ class Player {
 
         if (this.attackTimer > 0) this.attackTimer -= 16;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
+    }
+
+    updateHunger(dt) {
+        // Convert dt from ms to seconds
+        const seconds = dt / 1000;
+
+        // Drain hunger over time (faster when moving)
+        const drainMult = this.isMoving ? 2.0 : 1.0;
+        this.hunger -= this.hungerDrainRate * seconds * drainMult;
+        if (this.hunger < 0) this.hunger = 0;
+
+        // Starvation damage
+        if (this.hunger < this.hungerDamageThreshold) {
+            this.health -= this.hungerDamageRate * seconds;
+            if (this.health < 0) this.health = 0;
+        }
+
+        // Health regen when well-fed
+        if (this.hunger > this.healthRegenThreshold && this.health < this.maxHealth) {
+            this.health += this.healthRegenRate * seconds;
+            if (this.health > this.maxHealth) this.health = this.maxHealth;
+        }
+    }
+
+    eat(amount) {
+        this.hunger = Math.min(this.hunger + amount, this.maxHunger);
     }
 
     attack() {
