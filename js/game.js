@@ -83,6 +83,14 @@ class Game {
         this.slots = new Array(8).fill(null);
         this.selectedSlot = 0;
 
+        // Armor slots
+        this.armorSlots = {
+            helmet: null,
+            chestplate: null,
+            leggings: null
+        };
+        this.armorDefense = 0;
+
         // Create items
         this.slots[0] = new Item('Меч', 10, 10, 'no_texture.png');
         this.slots[1] = new Item('Лук', 5, 0, 'no_texture.png');
@@ -853,7 +861,8 @@ class Game {
             enemy.update(this.player.x, this.player.y, this.tileMap, this.player);
             enemy.speed = originalSpeed;
             if (enemy.tryAttack(this.player.x, this.player.y)) {
-                this.player.health -= enemy.attackDamage;
+                const reducedDamage = Math.max(1, enemy.attackDamage - this.armorDefense);
+                this.player.health -= reducedDamage;
                 this.damageFlashTimer = this.damageFlashDuration;
                 this.audio.playPlayerHit();
                 this.particles.emit(this.player.x, this.player.y, '#ff1744', 10, 3, 20, 3);
@@ -1379,6 +1388,44 @@ class Game {
             }
         }
 
+        // Draw armor slots (left side of inventory)
+        const armorSlotSize = 40;
+        const armorX = startX - armorSlotSize - 10;
+        const armorY = startY;
+        const armorLabels = { helmet: 'Шлем', chestplate: 'Нагрудник', leggings: 'Поножи' };
+        const armorColors = { helmet: '#42a5f5', chestplate: '#66bb6a', leggings: '#ffa726' };
+
+        ctx.font = '9px monospace';
+        let armorIdx = 0;
+        for (const [slotType, label] of Object.entries(armorLabels)) {
+            const sy = armorY + armorIdx * (armorSlotSize + 5);
+            const armor = this.armorSlots[slotType];
+
+            // Background
+            ctx.fillStyle = armor ? '#555' : '#333';
+            ctx.fillRect(armorX, sy, armorSlotSize, armorSlotSize);
+
+            // Border
+            ctx.strokeStyle = armor ? armorColors[slotType] : '#555';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(armorX, sy, armorSlotSize, armorSlotSize);
+
+            // Label
+            ctx.fillStyle = '#888';
+            ctx.fillText(label, armorX + armorSlotSize + 4, sy + 12);
+
+            if (armor) {
+                ctx.fillStyle = '#ccc';
+                ctx.font = '8px monospace';
+                ctx.fillText(armor.name.substring(0, 8), armorX + 2, sy + armorSlotSize / 2 + 4);
+                ctx.font = '9px monospace';
+                // Defense value
+                ctx.fillStyle = '#ffd54f';
+                ctx.fillText(`+${armor.defense || 0}`, armorX + armorSlotSize + 4, sy + 24);
+            }
+            armorIdx++;
+        }
+
         // Draw skill slots
         const skillSlotSize = 40;
         const skillMargin = 5;
@@ -1842,6 +1889,10 @@ class Game {
             }
 
             this.player.applyItemStats(this.slots[this.selectedSlot]);
+        } else if (result.armorType) {
+            // Equip armor to the appropriate slot
+            this.armorSlots[result.armorType] = result;
+            this.updateArmorStats();
         } else {
             // Put crafted item in first empty slot
             for (let i = 0; i < this.slots.length; i++) {
@@ -1856,6 +1907,23 @@ class Game {
         this.renderCraftingUI();
         this.audio.playLevelUp();
         this.particles.emit(this.player.x, this.player.y, '#ffd54f', 10, 3, 25, 4);
+    }
+
+    updateArmorStats() {
+        let totalDefense = 0;
+        let totalHealthBonus = 0;
+        for (const slot of ['helmet', 'chestplate', 'leggings']) {
+            const armor = this.armorSlots[slot];
+            if (armor) {
+                totalDefense += armor.defense || 0;
+                totalHealthBonus += armor.maxHealthBonus || 0;
+            }
+        }
+        this.armorDefense = totalDefense;
+        // Apply health bonus
+        const baseMaxHealth = 100 + (this.playerLevel - 1) * 20;
+        this.player.maxHealth = baseMaxHealth + totalHealthBonus;
+        this.player.health = Math.min(this.player.health, this.player.maxHealth);
     }
 
     gameLoop(time) {

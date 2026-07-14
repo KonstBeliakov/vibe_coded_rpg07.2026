@@ -173,6 +173,75 @@ const RECIPES = [
         ingredients: { metal: 6, essence: 4 },
         description: 'Увеличивает радиус атаки на +10'
     },
+    // ========== Броня ==========
+    {
+        name: 'Шлем (железный)',
+        result: () => {
+            const item = new Item('Железный шлем', 0, 0, 'no_texture.png', 'common');
+            item.armorType = 'helmet';
+            item.defense = 5;
+            return item;
+        },
+        ingredients: { metal: 4, stone: 2 },
+        description: 'Защита: +5'
+    },
+    {
+        name: 'Нагрудник (железный)',
+        result: () => {
+            const item = new Item('Железный нагрудник', 0, 0, 'no_texture.png', 'common');
+            item.armorType = 'chestplate';
+            item.defense = 10;
+            item.maxHealthBonus = 20;
+            return item;
+        },
+        ingredients: { metal: 6, stone: 3 },
+        description: 'Защита: +10, HP: +20'
+    },
+    {
+        name: 'Поножи (железные)',
+        result: () => {
+            const item = new Item('Железные поножи', 0, 0, 'no_texture.png', 'common');
+            item.armorType = 'leggings';
+            item.defense = 7;
+            return item;
+        },
+        ingredients: { metal: 5, stone: 2 },
+        description: 'Защита: +7'
+    },
+    {
+        name: 'Шлем (стальной)',
+        result: () => {
+            const item = new Item('Стальной шлем', 0, 0, 'no_texture.png', 'rare');
+            item.armorType = 'helmet';
+            item.defense = 10;
+            return item;
+        },
+        ingredients: { metal: 7, essence: 2 },
+        description: 'Защита: +10'
+    },
+    {
+        name: 'Нагрудник (стальной)',
+        result: () => {
+            const item = new Item('Стальной нагрудник', 0, 0, 'no_texture.png', 'rare');
+            item.armorType = 'chestplate';
+            item.defense = 18;
+            item.maxHealthBonus = 40;
+            return item;
+        },
+        ingredients: { metal: 10, essence: 4 },
+        description: 'Защита: +18, HP: +40'
+    },
+    {
+        name: 'Поножи (стальные)',
+        result: () => {
+            const item = new Item('Стальные поножи', 0, 0, 'no_texture.png', 'rare');
+            item.armorType = 'leggings';
+            item.defense = 12;
+            return item;
+        },
+        ingredients: { metal: 8, essence: 3 },
+        description: 'Защита: +12'
+    },
     // ========== Добавление эффектов оружию ==========
     {
         name: 'Огненный эффект',
