@@ -18,7 +18,26 @@ class Enemy {
         this.type = config.type || 'normal';
     }
 
-    update(playerX, playerY, tileMap) {
+    update(playerX, playerY, tileMap, player) {
+        // If player is invisible, enemies don't move toward them
+        if (player && player.isInvisible) {
+            // Wander randomly
+            if (!this.wanderAngle) this.wanderAngle = Math.random() * Math.PI * 2;
+            this.wanderAngle += (Math.random() - 0.5) * 0.5;
+            const wanderX = this.x + Math.cos(this.wanderAngle) * this.speed;
+            const wanderY = this.y + Math.sin(this.wanderAngle) * this.speed;
+            // Check if wander position is valid (not in wall)
+            const wanderTileX = Math.floor(wanderX / TILE_SIZE);
+            const wanderTileY = Math.floor(wanderY / TILE_SIZE);
+            if (!tileMap || !tileMap.isWall(wanderTileX, wanderTileY)) {
+                this.x = wanderX;
+                this.y = wanderY;
+            }
+            if (this.attackTimer > 0) this.attackTimer -= 16;
+            if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
+            return;
+        }
+
         // Use A* pathfinding to avoid walls
         const playerTileX = Math.floor(playerX / TILE_SIZE);
         const playerTileY = Math.floor(playerY / TILE_SIZE);

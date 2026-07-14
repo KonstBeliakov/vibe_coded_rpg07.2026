@@ -45,6 +45,8 @@ class Game {
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
         this.playerGold = 0;
+        this.timeSlowMultiplier = 1.0;
+        this.timeSlowTimer = 0;
 
         // Spawner module
         this.spawner = new Spawner(this);
@@ -327,9 +329,13 @@ class Game {
             const dy = potion.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 30) {
-                potion.apply(this.player);
+                potion.apply(this.player, this);
                 this.audio.playLevelUp();
-                this.particles.emit(potion.x, potion.y, potion.type === 'health' ? '#e53935' : '#42a5f5', 8, 3, 20, 3);
+                const colorMap = {
+                    'health': '#e53935', 'speed': '#42a5f5', 'invisibility': '#e0e0e0',
+                    'regen': '#4caf50', 'attack_boost': '#ff6d00', 'slow_time': '#00bcd4'
+                };
+                this.particles.emit(potion.x, potion.y, colorMap[potion.type] || '#e53935', 8, 3, 20, 3);
             }
         }
 
@@ -711,7 +717,7 @@ class Game {
             this.audio.playShoot();
         } else {
             const range = this.player.attackRange;
-            const damage = this.player.attackDamage;
+            const damage = Math.floor(this.player.attackDamage * this.player.attackDamageMultiplier);
 
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i];
@@ -814,6 +820,14 @@ class Game {
             this.player.y = prevY;
         }
 
+        // Update time slow effect
+        if (this.timeSlowTimer > 0) {
+            this.timeSlowTimer -= dt;
+            if (this.timeSlowTimer <= 0) {
+                this.timeSlowMultiplier = 1.0;
+            }
+        }
+
         for (const enemy of this.enemies) {
             // Push enemies out of safe zones
             // Check spawn safe zone
@@ -833,7 +847,11 @@ class Game {
                 }
             }
 
-            enemy.update(this.player.x, this.player.y, this.tileMap);
+            // Apply time slow to enemy update
+            const originalSpeed = enemy.speed;
+            enemy.speed *= this.timeSlowMultiplier;
+            enemy.update(this.player.x, this.player.y, this.tileMap, this.player);
+            enemy.speed = originalSpeed;
             if (enemy.tryAttack(this.player.x, this.player.y)) {
                 this.player.health -= enemy.attackDamage;
                 this.damageFlashTimer = this.damageFlashDuration;
@@ -988,6 +1006,20 @@ class Game {
 
         // Update hunger system
         this.player.updateHunger(dt);
+
+        // Update regen effect
+        if (this.player.regenRemaining > 0) {
+            this.player.regenTimer += dt;
+            this.player.regenRemaining -= dt;
+            if (this.player.regenTimer >= this.player.regenInterval) {
+                this.player.regenTimer = 0;
+                this.player.health = Math.min(this.player.health + this.player.regenAmount, this.player.maxHealth);
+                this.particles.emit(this.player.x, this.player.y, '#4caf50', 3, 1, 10, 2);
+            }
+            if (this.player.regenRemaining <= 0) {
+                this.player.regenRemaining = 0;
+            }
+        }
 
         // Update skills
         for (const slot of this.skills) {
@@ -1751,6 +1783,14 @@ class Game {
             this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'health'));
         } else if (result === 'potion_speed') {
             this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'speed'));
+        } else if (result === 'potion_invisibility') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'invisibility'));
+        } else if (result === 'potion_regen') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'regen'));
+        } else if (result === 'potion_attack_boost') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'attack_boost'));
+        } else if (result === 'potion_slow_time') {
+            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'slow_time'));
         } else if (result.startsWith('upgrade_')) {
             // Apply upgrade to currently selected item
             const selectedItem = this.slots[this.selectedSlot];

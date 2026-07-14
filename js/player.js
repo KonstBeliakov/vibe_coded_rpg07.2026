@@ -29,6 +29,14 @@ class Player {
         this.hungerDamageRate = 2; // damage per second when starving
         this.healthRegenRate = 2; // HP per second when well-fed (hunger > 50)
         this.healthRegenThreshold = 50;
+        // Potion effects
+        this.isInvisible = false;
+        this.attackDamageMultiplier = 1.0;
+        this.regenTimer = 0;
+        this.regenInterval = 500;
+        this.regenAmount = 1;
+        this.regenDuration = 10000;
+        this.regenRemaining = 0;
     }
 
     applyItemStats(item) {

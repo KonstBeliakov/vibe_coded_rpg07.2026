@@ -44,6 +44,30 @@ const RECIPES = [
         description: 'Увеличивает скорость на 5 сек'
     },
     {
+        name: 'Зелье невидимости',
+        result: () => 'potion_invisibility',
+        ingredients: { essence: 4, metal: 2 },
+        description: 'Невидимость на 5 сек (враги не видят)'
+    },
+    {
+        name: 'Зелье регенерации',
+        result: () => 'potion_regen',
+        ingredients: { essence: 3, stone: 2 },
+        description: 'Восстанавливает 2 HP/сек на 10 сек'
+    },
+    {
+        name: 'Зелье силы',
+        result: () => 'potion_attack_boost',
+        ingredients: { essence: 3, metal: 3 },
+        description: '+50% к урону на 8 сек'
+    },
+    {
+        name: 'Зелье замедления времени',
+        result: () => 'potion_slow_time',
+        ingredients: { essence: 5, metal: 4 },
+        description: 'Замедляет врагов на 5 сек'
+    },
+    {
         name: 'Огненный лук',
         result: () => {
             const item = new Item('Огненный лук', 7, 0, 'no_texture.png');
