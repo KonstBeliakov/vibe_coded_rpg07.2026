@@ -282,20 +282,112 @@ class CraftingUIManager {
     }
 
     render() {
-        document.getElementById('craftingResources').textContent = this.game.crafting.getResourceString();
+        // Render resources bar
+        const resourcesContainer = document.getElementById('craftingResources');
+        resourcesContainer.innerHTML = '';
+        for (const [type, data] of Object.entries(RESOURCES)) {
+            const amount = this.game.crafting.inventory[type] || 0;
+            const resEl = document.createElement('span');
+            resEl.style.cssText = 'background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:3px; display:flex; align-items:center; gap:4px;';
+            resEl.innerHTML = `<span>${data.icon}</span><span style="color:${data.color}; font-weight:bold;">${amount}</span><span style="color:#aaa;">${data.name}</span>`;
+            resourcesContainer.appendChild(resEl);
+        }
+
+        // Render recipes grouped by category
         const container = document.getElementById('craftingRecipes');
         container.innerHTML = '';
 
+        // Group recipes
+        const categories = {
+            '⚔️ Оружие': [],
+            '🛡️ Броня': [],
+            '🧪 Зелья': [],
+            '🔧 Инструменты': [],
+            '⬆️ Улучшения': []
+        };
+
         for (let i = 0; i < RECIPES.length; i++) {
             const recipe = RECIPES[i];
-            const canCraft = this.game.crafting.canCraft(recipe);
-            const el = document.createElement('div');
-            el.style.cssText = `padding:4px 8px; background:${canCraft ? '#444' : '#333'}; border:1px solid ${canCraft ? '#ff8f00' : '#555'}; border-radius:3px; cursor:${canCraft ? 'pointer' : 'not-allowed'}; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:90px; opacity:${canCraft ? 1 : 0.5};`;
-            el.innerHTML = `<span>${recipe.name}</span><span style="color:#aaa; font-size:9px;">${recipe.description}</span>`;
-            if (canCraft) {
-                el.addEventListener('click', () => this.craft(i));
+            const name = recipe.name;
+            if (name.includes('Шлем') || name.includes('Нагрудник') || name.includes('Поножи') || name.includes('Кольчуга')) {
+                categories['🛡️ Броня'].push(i);
+            } else if (name.includes('Зелье')) {
+                categories['🧪 Зелья'].push(i);
+            } else if (name.includes('Кирка') || name.includes('Топор')) {
+                categories['🔧 Инструменты'].push(i);
+            } else if (name.includes('Заточка') || name.includes('Увеличение') || name.includes('эффект') || name.includes('Огненный') || name.includes('Ледяной') || name.includes('Отравленный')) {
+                categories['⬆️ Улучшения'].push(i);
+            } else {
+                categories['⚔️ Оружие'].push(i);
             }
-            container.appendChild(el);
+        }
+
+        for (const [catName, recipeIndices] of Object.entries(categories)) {
+            if (recipeIndices.length === 0) continue;
+
+            const catHeader = document.createElement('div');
+            catHeader.style.cssText = 'color:#ffd54f; font-size:12px; font-weight:bold; margin-top:6px; margin-bottom:2px; padding:2px 4px; border-bottom:1px solid #444;';
+            catHeader.textContent = catName;
+            container.appendChild(catHeader);
+
+            for (const idx of recipeIndices) {
+                const recipe = RECIPES[idx];
+                const canCraft = this.game.crafting.canCraft(recipe);
+
+                const el = document.createElement('div');
+                el.style.cssText = `padding:6px 10px; background:${canCraft ? 'rgba(255,143,0,0.1)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${canCraft ? '#ff8f00' : '#444'}; border-radius:4px; cursor:${canCraft ? 'pointer' : 'not-allowed'}; font-size:11px; display:flex; align-items:center; justify-content:space-between; opacity:${canCraft ? 1 : 0.4}; transition:background 0.15s;`;
+                if (canCraft) {
+                    el.addEventListener('mouseenter', () => { el.style.background = 'rgba(255,143,0,0.25)'; });
+                    el.addEventListener('mouseleave', () => { el.style.background = 'rgba(255,143,0,0.1)'; });
+                }
+
+                // Left side: name + description
+                const leftDiv = document.createElement('div');
+                leftDiv.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+                const nameSpan = document.createElement('span');
+                nameSpan.style.cssText = 'color:#fff; font-weight:bold;';
+                nameSpan.textContent = recipe.name;
+                leftDiv.appendChild(nameSpan);
+
+                const descSpan = document.createElement('span');
+                descSpan.style.cssText = 'color:#aaa; font-size:10px;';
+                descSpan.textContent = recipe.description;
+                leftDiv.appendChild(descSpan);
+
+                el.appendChild(leftDiv);
+
+                // Right side: ingredients
+                const ingDiv = document.createElement('div');
+                ingDiv.style.cssText = 'display:flex; gap:4px; align-items:center;';
+                for (const [resType, amount] of Object.entries(recipe.ingredients)) {
+                    const resData = RESOURCES[resType];
+                    const has = (this.game.crafting.inventory[resType] || 0) >= amount;
+                    const ingEl = document.createElement('span');
+                    ingEl.style.cssText = `padding:2px 5px; border-radius:3px; background:${has ? 'rgba(76,175,80,0.2)' : 'rgba(229,57,53,0.2)'}; font-size:10px; display:flex; align-items:center; gap:2px;`;
+                    ingEl.innerHTML = `${resData.icon || ''} <span style="color:${has ? '#81c784' : '#ef9a9a'};">${amount}</span>`;
+                    ingDiv.appendChild(ingEl);
+                }
+
+                // Craft button
+                if (canCraft) {
+                    const craftBtn = document.createElement('span');
+                    craftBtn.style.cssText = 'margin-left:8px; padding:2px 8px; background:#ff8f00; color:#000; border-radius:3px; font-size:10px; font-weight:bold; cursor:pointer;';
+                    craftBtn.textContent = 'Крафт';
+                    craftBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.craft(idx);
+                    });
+                    ingDiv.appendChild(craftBtn);
+                }
+
+                el.appendChild(ingDiv);
+
+                if (canCraft) {
+                    el.addEventListener('click', () => this.craft(idx));
+                }
+
+                container.appendChild(el);
+            }
         }
     }
 
