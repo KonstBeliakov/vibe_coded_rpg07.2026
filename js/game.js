@@ -71,6 +71,7 @@ class Game {
         this.craftingUI = new CraftingUIManager(this);
         this.ui = new UIManager(this);
         this.interaction = new InteractionManager(this);
+        this.combat = new CombatManager(this);
         this.skills = SKILL_SLOTS.map(s => ({ key: s.key, skill: s.skill }));
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
@@ -144,7 +145,7 @@ class Game {
             this.keys[e.key] = true;
             if (e.key === this.settings.getKey('attack')) {
                 e.preventDefault();
-                this.playerAttack();
+                this.combat.playerAttack();
             }
             if (e.key === this.settings.getKey('interact')) {
                 this.interaction.interact();
@@ -483,106 +484,6 @@ class Game {
         this.enemies.push(enemy);
     }
 
-
-    playerAttack() {
-        if (!this.player.attack()) return;
-
-        const px = this.player.x;
-        const py = this.player.y;
-
-        const selectedItem = this.slots[this.selectedSlot];
-        if (selectedItem && selectedItem.name.includes('Посох')) {
-            // Staff: shoot projectiles in multiple directions
-            const angles = [-0.5, -0.25, 0, 0.25, 0.5]; // 5 projectiles in a fan
-            const speed = 4;
-            const worldMouseX = px + (this.mouseX - this.width / 2);
-            const worldMouseY = py + (this.mouseY - this.height / 2);
-            const baseAngle = Math.atan2(worldMouseY - py, worldMouseX - px);
-            for (const offset of angles) {
-                const angle = baseAngle + offset;
-                const vx = Math.cos(angle) * speed;
-                const vy = Math.sin(angle) * speed;
-                this.staffProjectiles.push(new StaffProjectile(px, py, vx, vy));
-            }
-            this.audio.playShoot();
-        } else if (selectedItem && (selectedItem.name.includes('Лук') || selectedItem.name.includes('Огненный') || selectedItem.name.includes('Ледяной') || selectedItem.name.includes('Отравленный'))) {
-            const worldMouseX = px + (this.mouseX - this.width / 2);
-            const worldMouseY = py + (this.mouseY - this.height / 2);
-            const arrowType = selectedItem.arrowType || 'normal';
-            this.arrows.push(new Arrow(px, py, worldMouseX, worldMouseY, arrowType));
-            this.audio.playShoot();
-        } else {
-            const range = this.player.attackRange;
-            const damage = Math.floor(this.player.attackDamage * this.player.attackDamageMultiplier);
-
-            for (let i = this.enemies.length - 1; i >= 0; i--) {
-                const enemy = this.enemies[i];
-                const dx = enemy.x - px;
-                const dy = enemy.y - py;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist <= range) {
-                    enemy.health -= damage;
-                    this.audio.playHit();
-                    this.particles.emit(enemy.x, enemy.y, '#ff5252', 8, 3, 20, 3);
-                    if (enemy.health <= 0) {
-                        this.addXP(enemy.xpReward);
-                        this.achievements.addKill();
-                        this.audio.playEnemyDeath();
-                        this.particles.emit(enemy.x, enemy.y, enemy.color, 15, 4, 30, 4);
-                        // Drop gold
-                        const goldDrop = Math.floor(2 + Math.random() * 4 + this.playerLevel * 0.5);
-                        this.playerGold += goldDrop;
-                        this.enemies.splice(i, 1);
-                    }
-                }
-            }
-
-            // Try to mine ore if attacking with melee weapon
-            const isPickaxe = selectedItem && selectedItem.isPickaxe;
-            const oreRange = this.player.attackRange + 20;
-            const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-            const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-            for (let dy = -2; dy <= 2; dy++) {
-                for (let dx = -2; dx <= 2; dx++) {
-                    const tx = playerTileX + dx;
-                    const ty = playerTileY + dy;
-                    if (this.tileMap.isOre(tx, ty)) {
-                        // Check distance to ore tile
-                        const oreWorldX = tx * TILE_SIZE + TILE_SIZE / 2;
-                        const oreWorldY = ty * TILE_SIZE + TILE_SIZE / 2;
-                        const dx2 = oreWorldX - this.player.x;
-                        const dy2 = oreWorldY - this.player.y;
-                        const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-                        if (dist <= oreRange) {
-                            this.tileMap.mineOre(tx, ty);
-                            const metalAmount = isPickaxe ? 3 : 1;
-                            this.crafting.addResource('metal', metalAmount);
-                            this.audio.playHit();
-                            this.particles.emit(oreWorldX, oreWorldY, '#ffd54f', 8, 3, 20, 3);
-                        }
-                    }
-                }
-            }
-
-            // Attack boss with melee
-            if (this.boss) {
-                const dx = this.boss.x - px;
-                const dy = this.boss.y - py;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist <= range) {
-                    this.boss.health -= damage;
-                    this.audio.playHit();
-                    this.particles.emit(this.boss.x, this.boss.y, '#d500f9', 10, 3, 25, 4);
-                    if (this.boss.health <= 0) {
-                        this.addXP(this.boss.xpReward);
-                        this.audio.playEnemyDeath();
-                        this.particles.emit(this.boss.x, this.boss.y, '#ffd700', 30, 5, 50, 6);
-                        this.boss = null;
-                    }
-                }
-            }
-        }
-    }
 
     update(dt) {
         if (this.gameOver) return;
