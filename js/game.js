@@ -64,8 +64,7 @@ class Game {
         this.maxEnemies = 12;
         this.settingsOpen = false;
         this.chestUI = new ChestUIManager(this);
-        this.merchantUIOpen = false;
-        this.activeMerchant = null;
+        this.merchantUI = new MerchantUIManager(this);
         this.achievements = new AchievementSystem();
         this.effects = new EffectManager();
         this.crafting = new CraftingSystem();
@@ -165,8 +164,8 @@ class Game {
             if (e.key === 'q' || e.key === 'Q') {
                 if (this.chestUI.isOpen) {
                     this.chestUI.deposit();
-                } else if (this.merchantUIOpen) {
-                    this.sellToMerchant();
+                } else if (this.merchantUI.isOpen) {
+                    this.merchantUI.sell();
                 }
             }
             const num = parseInt(e.key);
@@ -221,8 +220,8 @@ class Game {
         const py = this.player.y;
 
         // If merchant UI is open, close it
-        if (this.merchantUIOpen) {
-            this.closeMerchantUI();
+        if (this.merchantUI.isOpen) {
+            this.merchantUI.close();
             return;
         }
 
@@ -276,7 +275,7 @@ class Game {
             const dy = this.merchant.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= this.merchant.interactRange) {
-                this.openMerchantUI();
+                this.merchantUI.open();
                 return;
             }
         }
@@ -1555,78 +1554,6 @@ class Game {
             row.appendChild(labelEl);
             row.appendChild(keyEl);
             this.settingsContent.appendChild(row);
-        }
-    }
-
-    openMerchantUI() {
-        this.merchantUIOpen = true;
-        document.getElementById('merchantUI').style.display = 'block';
-        this.renderMerchantUI();
-    }
-
-    closeMerchantUI() {
-        this.merchantUIOpen = false;
-        document.getElementById('merchantUI').style.display = 'none';
-    }
-
-    renderMerchantUI() {
-        if (!this.merchant) return;
-        const container = document.getElementById('merchantStock');
-        container.innerHTML = '';
-        document.getElementById('merchantGold').textContent = this.playerGold;
-
-        for (let i = 0; i < this.merchant.stock.length; i++) {
-            const item = this.merchant.stock[i];
-            const el = document.createElement('div');
-            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #7b1fa2; border-radius:3px; cursor:pointer; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:80px;';
-            el.innerHTML = `<span>${item.icon} ${item.name}</span><span style="color:#ffd54f; font-size:10px;">${item.cost} монет</span>`;
-            el.title = 'Нажми чтобы купить';
-            el.addEventListener('click', () => this.buyFromMerchant(i));
-            container.appendChild(el);
-        }
-
-        if (this.merchant.stock.length === 0) {
-            const empty = document.createElement('div');
-            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
-            empty.textContent = 'Товар закончился';
-            container.appendChild(empty);
-        }
-
-        document.getElementById('merchantSelectedSlot').textContent = this.selectedSlot + 1;
-    }
-
-    buyFromMerchant(index) {
-        if (!this.merchant) return;
-        const result = this.merchant.buyItem(index, this.slots, this.playerGold);
-        if (!result) {
-            this.audio.playPlayerHit();
-            return;
-        }
-
-        this.playerGold -= result.cost;
-
-        if (result.type === 'potion') {
-            const type = result.potionType;
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, type));
-        }
-
-        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-        this.renderMerchantUI();
-        this.audio.playLevelUp();
-    }
-
-    sellToMerchant() {
-        if (!this.merchant) return;
-        const item = this.slots[this.selectedSlot];
-        if (!item) return;
-
-        const value = this.merchant.sellItem(item);
-        if (value > 0) {
-            this.playerGold += value;
-            this.slots[this.selectedSlot] = null;
-            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-            this.renderMerchantUI();
-            this.audio.playLevelUp();
         }
     }
 

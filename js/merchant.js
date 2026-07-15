@@ -1,3 +1,83 @@
+// ========== Merchant UI Manager ==========
+class MerchantUIManager {
+    constructor(game) {
+        this.game = game;
+        this.isOpen = false;
+    }
+
+    open() {
+        this.isOpen = true;
+        document.getElementById('merchantUI').style.display = 'block';
+        this.render();
+    }
+
+    close() {
+        this.isOpen = false;
+        document.getElementById('merchantUI').style.display = 'none';
+    }
+
+    render() {
+        if (!this.game.merchant) return;
+        const container = document.getElementById('merchantStock');
+        container.innerHTML = '';
+        document.getElementById('merchantGold').textContent = this.game.playerGold;
+
+        for (let i = 0; i < this.game.merchant.stock.length; i++) {
+            const item = this.game.merchant.stock[i];
+            const el = document.createElement('div');
+            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #7b1fa2; border-radius:3px; cursor:pointer; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:80px;';
+            el.innerHTML = `<span>${item.icon} ${item.name}</span><span style="color:#ffd54f; font-size:10px;">${item.cost} монет</span>`;
+            el.title = 'Нажми чтобы купить';
+            el.addEventListener('click', () => this.buy(i));
+            container.appendChild(el);
+        }
+
+        if (this.game.merchant.stock.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
+            empty.textContent = 'Товар закончился';
+            container.appendChild(empty);
+        }
+
+        document.getElementById('merchantSelectedSlot').textContent = this.game.selectedSlot + 1;
+    }
+
+    buy(index) {
+        if (!this.game.merchant) return;
+        const result = this.game.merchant.buyItem(index, this.game.slots, this.game.playerGold);
+        if (!result) {
+            this.game.audio.playPlayerHit();
+            return;
+        }
+
+        this.game.playerGold -= result.cost;
+
+        if (result.type === 'potion') {
+            const type = result.potionType;
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, type));
+        }
+
+        this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+        this.render();
+        this.game.audio.playLevelUp();
+    }
+
+    sell() {
+        if (!this.game.merchant) return;
+        const item = this.game.slots[this.game.selectedSlot];
+        if (!item) return;
+
+        const value = this.game.merchant.sellItem(item);
+        if (value > 0) {
+            this.game.playerGold += value;
+            this.game.slots[this.game.selectedSlot] = null;
+            this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+            this.render();
+            this.game.audio.playLevelUp();
+        }
+    }
+}
+
 // ========== Merchant ==========
 class Merchant {
     constructor(x, y) {
