@@ -7,6 +7,8 @@ class InteractionManager {
     interact() {
         const px = this.game.player.x;
         const py = this.game.player.y;
+        const tileX = Math.floor(px / TILE_SIZE);
+        const tileY = Math.floor(py / TILE_SIZE);
 
         // If merchant UI is open, close it
         if (this.game.merchantUI.isOpen) {
@@ -84,34 +86,70 @@ class InteractionManager {
             }
         }
 
-        // Check flowers
-        for (const flower of this.game.flowers) {
-            if (flower.collected) continue;
-            const dx = flower.x - px;
-            const dy = flower.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= flower.interactRange) {
-                if (flower.interact(this.game.player)) {
+        // Check flowers (seed-based) - interact with tile player is on or adjacent
+        const biome = this.game.tileMap.getBiome(tileX, tileY);
+        if (biome === BIOME_MOSSY && Flower.hasAt(tileX, tileY, this.game.worldSeed)) {
+            const key = `${tileX},${tileY}`;
+            if (!this.game.collectedTiles.has(key)) {
+                const isThorn = Flower.isThornAt(tileX, tileY, this.game.worldSeed);
+                if (isThorn) {
+                    // Thorn flower - collect to get essence
+                    this.game.collectedTiles.add(key);
+                    this.game.crafting.addResource('essence', 1);
                     this.game.audio.playLevelUp();
-                    this.game.particles.emit(flower.x, flower.y, '#42a5f5', 8, 3, 20, 3);
+                    this.game.particles.emit(tileX * TILE_SIZE + TILE_SIZE / 2, tileY * TILE_SIZE + TILE_SIZE / 2, '#e53935', 8, 3, 20, 3);
+                } else {
+                    // Regular flower - heal
+                    this.game.collectedTiles.add(key);
+                    this.game.player.health = Math.min(this.game.player.health + 5, this.game.player.maxHealth);
+                    if (this.game.player.eat) {
+                        this.game.player.eat(15);
+                    }
+                    this.game.audio.playLevelUp();
+                    this.game.particles.emit(tileX * TILE_SIZE + TILE_SIZE / 2, tileY * TILE_SIZE + TILE_SIZE / 2, '#42a5f5', 8, 3, 20, 3);
                 }
-                break;
             }
         }
 
-        // Check thorn flowers (collect to get essence)
-        for (const thorn of this.game.thornFlowers) {
-            if (thorn.collected) continue;
-            const dx = thorn.x - px;
-            const dy = thorn.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= thorn.interactRange) {
-                if (thorn.interact(this.game.player)) {
-                    this.game.crafting.addResource('essence', thorn.essenceReward);
-                    this.game.audio.playLevelUp();
-                    this.game.particles.emit(thorn.x, thorn.y, '#e53935', 8, 3, 20, 3);
+        // Check rocks (seed-based) - interact with adjacent tiles
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const tx = tileX + dx;
+                const ty = tileY + dy;
+                const key = `${tx},${ty}`;
+                if (this.game.collectedTiles.has(key)) continue;
+
+                const b = this.game.tileMap.getBiome(tx, ty);
+                if ((b === BIOME_NORMAL || b === BIOME_WEB) && Rock.hasAt(tx, ty, this.game.worldSeed)) {
+                    this.game.collectedTiles.add(key);
+                    this.game.crafting.addResource('stone', 1);
+                    this.game.audio.playHit();
+                    this.game.particles.emit(tx * TILE_SIZE + TILE_SIZE / 2, ty * TILE_SIZE + TILE_SIZE / 2, '#9e9e9e', 6, 2, 15, 3);
+                    return;
                 }
-                break;
+            }
+        }
+
+        // Check trees (seed-based) - chop to get wood
+        const selectedItem = this.game.slots[this.game.selectedSlot];
+        const isAxe = selectedItem && selectedItem.isAxe;
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const tx = tileX + dx;
+                const ty = tileY + dy;
+                const key = `${tx},${ty}`;
+                if (this.game.collectedTiles.has(key)) continue;
+
+                const b = this.game.tileMap.getBiome(tx, ty);
+                if ((b === BIOME_NORMAL || b === BIOME_MOSSY) && Tree.hasAt(tx, ty, this.game.worldSeed)) {
+                    this.game.collectedTiles.add(key);
+                    const woodAmount = isAxe ? 4 : 2;
+                    this.game.crafting.addResource('wood', woodAmount);
+                    this.game.audio.playHit();
+                    const color = b === BIOME_NORMAL ? '#6d4c41' : '#388e3c';
+                    this.game.particles.emit(tx * TILE_SIZE + TILE_SIZE / 2, ty * TILE_SIZE + TILE_SIZE / 2, color, 8, 3, 20, 3);
+                    return;
+                }
             }
         }
 
@@ -129,42 +167,6 @@ class InteractionManager {
                     'regen': '#4caf50', 'attack_boost': '#ff6d00', 'slow_time': '#00bcd4'
                 };
                 this.game.particles.emit(potion.x, potion.y, colorMap[potion.type] || '#e53935', 8, 3, 20, 3);
-            }
-        }
-
-        // Check rocks (collect to get stone)
-        for (const rock of this.game.rocks) {
-            if (rock.collected) continue;
-            const dx = rock.x - px;
-            const dy = rock.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= rock.interactRange) {
-                if (rock.interact(this.game.player)) {
-                    this.game.crafting.addResource('stone', rock.stoneAmount);
-                    this.game.audio.playHit();
-                    this.game.particles.emit(rock.x, rock.y, '#9e9e9e', 6, 2, 15, 3);
-                }
-                break;
-            }
-        }
-
-        // Check trees (chop to get wood)
-        const selectedItem = this.game.slots[this.game.selectedSlot];
-        const isAxe = selectedItem && selectedItem.isAxe;
-        for (const tree of this.game.trees) {
-            if (tree.collected) continue;
-            const dx = tree.x - px;
-            const dy = tree.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= tree.interactRange) {
-                if (tree.chop(this.game.player)) {
-                    const woodAmount = isAxe ? tree.woodAmount + 2 : tree.woodAmount;
-                    this.game.crafting.addResource('wood', woodAmount);
-                    this.game.audio.playHit();
-                    const color = tree.isDead ? '#6d4c41' : '#388e3c';
-                    this.game.particles.emit(tree.x, tree.y, color, 8, 3, 20, 3);
-                }
-                break;
             }
         }
     }

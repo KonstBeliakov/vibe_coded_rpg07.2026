@@ -13,6 +13,7 @@ class Game {
         this.keys = {};
         this.gameOver = false;
 
+        this.worldSeed = Math.floor(Math.random() * 2147483647);
         this.tileMap = new TileMap(42);
         const spawnPos = this.tileMap.findEmptyTile(0, 0, 5);
         this.player = new Player(spawnPos.x, spawnPos.y);
@@ -22,12 +23,6 @@ class Game {
         this.staffProjectiles = [];
         this.chests = [];
         this.potions = [];
-        this.flowers = [];
-        this.thornFlowers = [];
-        this.rocks = [];
-        this.trees = [];
-        this.webs = [];
-        this.lavaPools = [];
         this.beds = [];
         this.boss = null;
         this.bossLevelInterval = 5;
@@ -47,6 +42,10 @@ class Game {
         this.playerGold = 0;
         this.timeSlowMultiplier = 1.0;
         this.timeSlowTimer = 0;
+
+        // Seed-based generation: track collected/interacted tiles
+        this.collectedTiles = new Set();
+        this.lavaAnimTimer = Math.random() * Math.PI * 2;
 
         // Spawner module
         this.spawner = new Spawner(this);
@@ -732,41 +731,56 @@ class Game {
         // Ensure each safe zone has a bed and storage chest
         this.spawner.ensureSafeZoneFurniture();
 
-        // Spawn flowers in mossy biome
-        this.spawner.spawnFlowers();
+        // Update lava animation timer
+        this.lavaAnimTimer += 0.05;
 
-        // Spawn webs in web biome
-        this.spawner.spawnWebs();
-
-        // Spawn lava pools in lava biome
-        this.spawner.spawnLavaPools();
-
-        // Spawn rocks in default and web biomes
-        this.spawner.spawnRocks();
-
-        // Spawn trees in default and mossy biomes
-        this.spawner.spawnTrees();
-
-        // Apply lava damage
-        for (const lava of this.lavaPools) {
-            lava.applyDamage(this.player, performance.now());
-        }
-
-        // Apply thorn flower damage
-        for (const thorn of this.thornFlowers) {
-            thorn.applyDamage(this.player, performance.now());
-        }
-
-        // Apply web slow effect
-        let webSlow = 1.0;
+        // Apply lava damage (seed-based)
         const playerTileX = Math.floor(this.player.x / TILE_SIZE);
         const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-        for (const web of this.webs) {
-            const webTileX = Math.floor(web.x / TILE_SIZE);
-            const webTileY = Math.floor(web.y / TILE_SIZE);
-            if (webTileX === playerTileX && webTileY === playerTileY) {
-                webSlow = web.slowFactor;
-                break;
+        const biome = this.tileMap.getBiome(playerTileX, playerTileY);
+        if (biome === BIOME_LAVA && LavaPool.hasAt(playerTileX, playerTileY, this.worldSeed)) {
+            const now = performance.now();
+            if (!this._lastLavaDamage) this._lastLavaDamage = 0;
+            if (now - this._lastLavaDamage > 500) {
+                this._lastLavaDamage = now;
+                this.player.health -= 15;
+                if (this.player.health < 0) this.player.health = 0;
+                this.particles.emit(this.player.x, this.player.y, '#ff6d00', 5, 2, 15, 3);
+            }
+        }
+
+        // Apply thorn flower damage (seed-based)
+        if (biome === BIOME_MOSSY && Flower.hasAt(playerTileX, playerTileY, this.worldSeed) && Flower.isThornAt(playerTileX, playerTileY, this.worldSeed)) {
+            const key = `${playerTileX},${playerTileY}`;
+            if (!this.collectedTiles.has(key)) {
+                const now = performance.now();
+                if (!this._lastThornDamage) this._lastThornDamage = 0;
+                if (now - this._lastThornDamage > 1000) {
+                    this._lastThornDamage = now;
+                    this.player.health -= 3;
+                    if (this.player.health < 0) this.player.health = 0;
+                    this.particles.emit(this.player.x, this.player.y, '#e53935', 3, 1, 10, 2);
+                }
+            }
+        }
+
+        // Apply web slow effect (seed-based)
+        let webSlow = 1.0;
+        if (biome === BIOME_WEB && Web.hasAt(playerTileX, playerTileY, this.worldSeed)) {
+            // Check if near a wall (webs only near walls)
+            let nearWall = false;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    if (this.tileMap.isWall(playerTileX + dx, playerTileY + dy)) {
+                        nearWall = true;
+                        break;
+                    }
+                }
+                if (nearWall) break;
+            }
+            if (nearWall) {
+                webSlow = 0.2;
             }
         }
         this.player.speedMultiplier = webSlow;
@@ -843,35 +857,8 @@ class Game {
             chest.draw(ctx, offsetX, offsetY);
         }
 
-        // Draw flowers
-        for (const flower of this.flowers) {
-            flower.draw(ctx, offsetX, offsetY);
-        }
-
-        // Draw thorn flowers
-        for (const thorn of this.thornFlowers) {
-            thorn.draw(ctx, offsetX, offsetY);
-        }
-
-        // Draw webs
-        for (const web of this.webs) {
-            web.draw(ctx, offsetX, offsetY);
-        }
-
-        // Draw lava pools
-        for (const lava of this.lavaPools) {
-            lava.draw(ctx, offsetX, offsetY);
-        }
-
-        // Draw rocks
-        for (const rock of this.rocks) {
-            rock.draw(ctx, offsetX, offsetY);
-        }
-
-        // Draw trees
-        for (const tree of this.trees) {
-            tree.draw(ctx, offsetX, offsetY);
-        }
+        // Draw seed-based world objects (trees, rocks, flowers, webs, lava)
+        this.drawWorldObjects(ctx, offsetX, offsetY);
 
         // Draw potions
         for (const potion of this.potions) {
@@ -907,6 +894,76 @@ class Game {
 
         // Draw UI overlay
         this.ui.draw();
+    }
+
+    drawWorldObjects(ctx, offsetX, offsetY) {
+        const startX = Math.floor(-offsetX / TILE_SIZE) - 1;
+        const startY = Math.floor(-offsetY / TILE_SIZE) - 1;
+        const endX = startX + Math.ceil(ctx.canvas.width / TILE_SIZE) + 2;
+        const endY = startY + Math.ceil(ctx.canvas.height / TILE_SIZE) + 2;
+
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const key = `${x},${y}`;
+                const isCollected = this.collectedTiles.has(key);
+                const biome = this.tileMap.getBiome(x, y);
+                const isWall = this.tileMap.isWall(x, y);
+
+                // Skip walls - objects only on empty tiles
+                if (isWall) continue;
+
+                // Trees in normal and mossy biomes
+                if ((biome === BIOME_NORMAL || biome === BIOME_MOSSY) && Tree.hasAt(x, y, this.worldSeed)) {
+                    if (!isCollected) {
+                        const isDead = biome === BIOME_NORMAL;
+                        Tree.drawAt(ctx, offsetX, offsetY, x, y, isDead);
+                    }
+                    continue; // Only one object per tile
+                }
+
+                // Rocks in normal and web biomes
+                if ((biome === BIOME_NORMAL || biome === BIOME_WEB) && Rock.hasAt(x, y, this.worldSeed)) {
+                    if (!isCollected) {
+                        Rock.drawAt(ctx, offsetX, offsetY, x, y);
+                    }
+                    continue;
+                }
+
+                // Flowers in mossy biome
+                if (biome === BIOME_MOSSY && Flower.hasAt(x, y, this.worldSeed)) {
+                    if (!isCollected) {
+                        const isThorn = Flower.isThornAt(x, y, this.worldSeed);
+                        Flower.drawAt(ctx, offsetX, offsetY, x, y, isThorn);
+                    }
+                    continue;
+                }
+
+                // Webs in web biome (near walls)
+                if (biome === BIOME_WEB && Web.hasAt(x, y, this.worldSeed)) {
+                    let nearWall = false;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            if (this.tileMap.isWall(x + dx, y + dy)) {
+                                nearWall = true;
+                                break;
+                            }
+                        }
+                        if (nearWall) break;
+                    }
+                    if (nearWall) {
+                        Web.drawAt(ctx, offsetX, offsetY, x, y);
+                    }
+                    continue;
+                }
+
+                // Lava pools in lava biome
+                if (biome === BIOME_LAVA && LavaPool.hasAt(x, y, this.worldSeed)) {
+                    LavaPool.drawAt(ctx, offsetX, offsetY, x, y, this.lavaAnimTimer);
+                    continue;
+                }
+            }
+        }
     }
 
     getArmorHealthBonus() {

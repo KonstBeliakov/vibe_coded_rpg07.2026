@@ -1,23 +1,19 @@
 // ========== Lava Pool ==========
+// Seed-based deterministic generation
 
 class LavaPool {
-    constructor(x, y, size) {
-        this.x = x;
-        this.y = y;
-        this.size = size || TILE_SIZE; // Size in pixels
-        this.damage = 15; // Damage per tick
-        this.damageCooldown = 500; // ms between damage ticks
-        this.lastDamageTime = 0;
-        this.animTimer = Math.random() * Math.PI * 2;
+    static CHANCE = 0.2; // 20% chance per tile in lava biome
+
+    static hasAt(tx, ty, seed) {
+        return seededRandom(seed, tx, ty, 6) < LavaPool.CHANCE;
     }
 
-    isPlayerOnLava(player) {
+    static isPlayerOnLava(player, tx, ty) {
         const half = player.size / 2;
-        // Check if player's bounding box overlaps with lava pool
-        const left = this.x;
-        const right = this.x + this.size;
-        const top = this.y;
-        const bottom = this.y + this.size;
+        const left = tx * TILE_SIZE;
+        const right = left + TILE_SIZE;
+        const top = ty * TILE_SIZE;
+        const bottom = top + TILE_SIZE;
 
         const pLeft = player.x - half;
         const pRight = player.x + half;
@@ -27,40 +23,27 @@ class LavaPool {
         return pLeft < right && pRight > left && pTop < bottom && pBottom > top;
     }
 
-    applyDamage(player, currentTime) {
-        if (currentTime - this.lastDamageTime < this.damageCooldown) return false;
-        if (!this.isPlayerOnLava(player)) return false;
+    static drawAt(ctx, offsetX, offsetY, tx, ty, animTimer) {
+        const screenX = tx * TILE_SIZE + offsetX;
+        const screenY = ty * TILE_SIZE + offsetY;
 
-        this.lastDamageTime = currentTime;
-        player.health -= this.damage;
-        if (player.health < 0) player.health = 0;
-        return true;
-    }
-
-    draw(ctx, offsetX, offsetY) {
-        const screenX = this.x + offsetX;
-        const screenY = this.y + offsetY;
-
-        this.animTimer += 0.05;
-
-        // Draw lava pool with animated glow
-        const pulse = Math.sin(this.animTimer) * 0.15 + 0.85;
+        const pulse = Math.sin(animTimer) * 0.15 + 0.85;
 
         // Main lava body
         ctx.fillStyle = `rgba(255, 80, 0, ${0.7 * pulse})`;
-        ctx.fillRect(screenX, screenY, this.size, this.size);
+        ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
         // Inner glow
         ctx.fillStyle = `rgba(255, 150, 0, ${0.4 * pulse})`;
-        ctx.fillRect(screenX + 3, screenY + 3, this.size - 6, this.size - 6);
+        ctx.fillRect(screenX + 3, screenY + 3, TILE_SIZE - 6, TILE_SIZE - 6);
 
         // Center bright spot
         ctx.fillStyle = `rgba(255, 200, 50, ${0.3 * pulse})`;
-        ctx.fillRect(screenX + 6, screenY + 6, this.size - 12, this.size - 12);
+        ctx.fillRect(screenX + 6, screenY + 6, TILE_SIZE - 12, TILE_SIZE - 12);
 
         // Border
         ctx.strokeStyle = `rgba(255, 60, 0, ${0.5 * pulse})`;
         ctx.lineWidth = 1;
-        ctx.strokeRect(screenX, screenY, this.size, this.size);
+        ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
     }
 }

@@ -1,58 +1,54 @@
 // ========== Tree ==========
+// Seed-based deterministic generation
 
 class Tree {
-    constructor(x, y, isDead = false) {
-        this.x = x;
-        this.y = y;
-        this.size = 20;
-        this.isDead = isDead;
-        this.collected = false;
-        this.interactRange = 30;
-        this.woodAmount = 2 + Math.floor(Math.random() * 2); // 2-3 wood
+    static CHANCE = 0.005; // 0.5% chance per tile
+
+    static hasAt(tx, ty, seed) {
+        return seededRandom(seed, tx, ty, 2) < Tree.CHANCE;
     }
 
-    chop(player) {
-        if (this.collected) return false;
-        this.collected = true;
-        return true; // Signal that it was chopped
+    static isDeadAt(tx, ty, seed) {
+        // Dead trees in normal biome, living in mossy
+        // We determine this by biome, not by random
+        return false; // Will be overridden by caller based on biome
     }
 
-    draw(ctx, offsetX, offsetY) {
-        if (this.collected) return;
-        const screenX = this.x + offsetX;
-        const screenY = this.y + offsetY;
+    static drawAt(ctx, offsetX, offsetY, tx, ty, isDead) {
+        const screenX = tx * TILE_SIZE + TILE_SIZE / 2 + offsetX;
+        const screenY = ty * TILE_SIZE + TILE_SIZE / 2 + offsetY;
 
-        if (this.isDead) {
+        if (isDead) {
             // Dead tree (dry) - brown trunk, no leaves
             ctx.fillStyle = '#6d4c41';
-            ctx.fillRect(screenX - 3, screenY - this.size / 2, 6, this.size);
+            ctx.fillRect(screenX - 3, screenY - 10, 6, 20);
 
             // Branches
             ctx.strokeStyle = '#5d4037';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(screenX - 3, screenY - this.size / 4);
-            ctx.lineTo(screenX - 10, screenY - this.size / 2 + 5);
+            ctx.moveTo(screenX - 3, screenY - 5);
+            ctx.lineTo(screenX - 10, screenY - 10 + 5);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(screenX + 3, screenY - this.size / 4);
-            ctx.lineTo(screenX + 10, screenY - this.size / 2 + 5);
+            ctx.moveTo(screenX + 3, screenY - 5);
+            ctx.lineTo(screenX + 10, screenY - 10 + 5);
             ctx.stroke();
         } else {
             // Living tree - brown trunk with green crown
             ctx.fillStyle = '#5d4037';
-            ctx.fillRect(screenX - 3, screenY - this.size / 4, 6, this.size / 2);
+            ctx.fillRect(screenX - 3, screenY - 5, 6, 10);
 
             // Crown (leaves)
             ctx.fillStyle = '#388e3c';
             ctx.beginPath();
-            ctx.arc(screenX, screenY - this.size / 2 - 4, this.size / 2, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY - 14, 10, 0, Math.PI * 2);
             ctx.fill();
 
             // Lighter leaves highlight
             ctx.fillStyle = '#4caf50';
             ctx.beginPath();
-            ctx.arc(screenX - 3, screenY - this.size / 2 - 6, this.size / 4, 0, Math.PI * 2);
+            ctx.arc(screenX - 3, screenY - 16, 5, 0, Math.PI * 2);
             ctx.fill();
         }
     }

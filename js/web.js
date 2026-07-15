@@ -1,16 +1,16 @@
 // ========== Web (spider web) ==========
+// Seed-based deterministic generation
 
 class Web {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = TILE_SIZE;
-        this.slowFactor = 0.2; // Reduce speed to 20%
+    static CHANCE = 0.4; // 40% chance near walls in web biome
+
+    static hasAt(tx, ty, seed) {
+        return seededRandom(seed, tx, ty, 5) < Web.CHANCE;
     }
 
-    draw(ctx, offsetX, offsetY) {
-        const screenX = this.x + offsetX;
-        const screenY = this.y + offsetY;
+    static drawAt(ctx, offsetX, offsetY, tx, ty) {
+        const screenX = tx * TILE_SIZE + offsetX;
+        const screenY = ty * TILE_SIZE + offsetY;
 
         // Draw web as a semi-transparent white spider web pattern
         ctx.save();
@@ -18,9 +18,9 @@ class Web {
         ctx.lineWidth = 1;
 
         // Draw radial lines
-        const cx = screenX + this.size / 2;
-        const cy = screenY + this.size / 2;
-        const radius = this.size / 2 - 2;
+        const cx = screenX + TILE_SIZE / 2;
+        const cy = screenY + TILE_SIZE / 2;
+        const radius = TILE_SIZE / 2 - 2;
 
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
