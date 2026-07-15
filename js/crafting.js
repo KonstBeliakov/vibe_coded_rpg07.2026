@@ -263,6 +263,115 @@ const RECIPES = [
     }
 ];
 
+// ========== Crafting UI Manager ==========
+class CraftingUIManager {
+    constructor(game) {
+        this.game = game;
+        this.isOpen = false;
+    }
+
+    open() {
+        this.isOpen = true;
+        document.getElementById('craftingUI').style.display = 'block';
+        this.render();
+    }
+
+    close() {
+        this.isOpen = false;
+        document.getElementById('craftingUI').style.display = 'none';
+    }
+
+    render() {
+        document.getElementById('craftingResources').textContent = this.game.crafting.getResourceString();
+        const container = document.getElementById('craftingRecipes');
+        container.innerHTML = '';
+
+        for (let i = 0; i < RECIPES.length; i++) {
+            const recipe = RECIPES[i];
+            const canCraft = this.game.crafting.canCraft(recipe);
+            const el = document.createElement('div');
+            el.style.cssText = `padding:4px 8px; background:${canCraft ? '#444' : '#333'}; border:1px solid ${canCraft ? '#ff8f00' : '#555'}; border-radius:3px; cursor:${canCraft ? 'pointer' : 'not-allowed'}; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:90px; opacity:${canCraft ? 1 : 0.5};`;
+            el.innerHTML = `<span>${recipe.name}</span><span style="color:#aaa; font-size:9px;">${recipe.description}</span>`;
+            if (canCraft) {
+                el.addEventListener('click', () => this.craft(i));
+            }
+            container.appendChild(el);
+        }
+    }
+
+    craft(recipeIndex) {
+        const result = this.game.crafting.craft(recipeIndex);
+        if (!result) {
+            this.game.audio.playPlayerHit();
+            return;
+        }
+
+        if (result === 'potion_health') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'health'));
+        } else if (result === 'potion_speed') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'speed'));
+        } else if (result === 'potion_invisibility') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'invisibility'));
+        } else if (result === 'potion_regen') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'regen'));
+        } else if (result === 'potion_attack_boost') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'attack_boost'));
+        } else if (result === 'potion_slow_time') {
+            this.game.potions.push(new Potion(this.game.player.x + (Math.random() - 0.5) * 30, this.game.player.y + (Math.random() - 0.5) * 30, 'slow_time'));
+        } else if (result.startsWith('upgrade_')) {
+            const selectedItem = this.game.slots[this.game.selectedSlot];
+            if (!selectedItem) {
+                this.game.audio.playPlayerHit();
+                return;
+            }
+
+            if (result === 'upgrade_damage_3') {
+                selectedItem.attackDamage += 3;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +3';
+            } else if (result === 'upgrade_damage_5') {
+                selectedItem.attackDamage += 5;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +5';
+            } else if (result === 'upgrade_damage_8') {
+                selectedItem.attackDamage += 8;
+                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +8';
+            } else if (result === 'upgrade_range_5') {
+                selectedItem.attackRange += 5;
+                selectedItem.name += ' (дальн.)';
+            } else if (result === 'upgrade_range_10') {
+                selectedItem.attackRange += 10;
+                selectedItem.name += ' (дальн.+)';
+            } else if (result === 'upgrade_fire') {
+                selectedItem.arrowType = 'fire';
+                selectedItem.name = 'Огненный ' + selectedItem.name;
+            } else if (result === 'upgrade_ice') {
+                selectedItem.arrowType = 'ice';
+                selectedItem.name = 'Ледяной ' + selectedItem.name;
+            } else if (result === 'upgrade_poison') {
+                selectedItem.arrowType = 'poison';
+                selectedItem.name = 'Отравленный ' + selectedItem.name;
+            }
+
+            this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+        } else if (result.armorType) {
+            this.game.armorSlots[result.armorType] = result;
+            this.game.updateArmorStats();
+            this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+        } else {
+            for (let i = 0; i < this.game.slots.length; i++) {
+                if (!this.game.slots[i]) {
+                    this.game.slots[i] = result;
+                    this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+                    break;
+                }
+            }
+        }
+
+        this.render();
+        this.game.audio.playLevelUp();
+        this.game.particles.emit(this.game.player.x, this.game.player.y, '#ffd54f', 10, 3, 25, 4);
+    }
+}
+
 class CraftingSystem {
     constructor() {
         this.inventory = {

@@ -68,7 +68,7 @@ class Game {
         this.achievements = new AchievementSystem();
         this.effects = new EffectManager();
         this.crafting = new CraftingSystem();
-        this.craftingUIOpen = false;
+        this.craftingUI = new CraftingUIManager(this);
         this.skills = SKILL_SLOTS.map(s => ({ key: s.key, skill: s.skill }));
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
@@ -148,10 +148,10 @@ class Game {
                 this.interact();
             }
             if (e.key === 'c' || e.key === 'C') {
-                if (this.craftingUIOpen) {
-                    this.closeCraftingUI();
+                if (this.craftingUI.isOpen) {
+                    this.craftingUI.close();
                 } else {
-                    this.openCraftingUI();
+                    this.craftingUI.open();
                 }
             }
             // Skill keys
@@ -1555,110 +1555,6 @@ class Game {
             row.appendChild(keyEl);
             this.settingsContent.appendChild(row);
         }
-    }
-
-    openCraftingUI() {
-        this.craftingUIOpen = true;
-        document.getElementById('craftingUI').style.display = 'block';
-        this.renderCraftingUI();
-    }
-
-    closeCraftingUI() {
-        this.craftingUIOpen = false;
-        document.getElementById('craftingUI').style.display = 'none';
-    }
-
-    renderCraftingUI() {
-        document.getElementById('craftingResources').textContent = this.crafting.getResourceString();
-        const container = document.getElementById('craftingRecipes');
-        container.innerHTML = '';
-
-        for (let i = 0; i < RECIPES.length; i++) {
-            const recipe = RECIPES[i];
-            const canCraft = this.crafting.canCraft(recipe);
-            const el = document.createElement('div');
-            el.style.cssText = `padding:4px 8px; background:${canCraft ? '#444' : '#333'}; border:1px solid ${canCraft ? '#ff8f00' : '#555'}; border-radius:3px; cursor:${canCraft ? 'pointer' : 'not-allowed'}; font-size:11px; display:flex; flex-direction:column; align-items:center; min-width:90px; opacity:${canCraft ? 1 : 0.5};`;
-            el.innerHTML = `<span>${recipe.name}</span><span style="color:#aaa; font-size:9px;">${recipe.description}</span>`;
-            if (canCraft) {
-                el.addEventListener('click', () => this.craftItem(i));
-            }
-            container.appendChild(el);
-        }
-    }
-
-    craftItem(recipeIndex) {
-        const result = this.crafting.craft(recipeIndex);
-        if (!result) {
-            this.audio.playPlayerHit();
-            return;
-        }
-
-        if (result === 'potion_health') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'health'));
-        } else if (result === 'potion_speed') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'speed'));
-        } else if (result === 'potion_invisibility') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'invisibility'));
-        } else if (result === 'potion_regen') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'regen'));
-        } else if (result === 'potion_attack_boost') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'attack_boost'));
-        } else if (result === 'potion_slow_time') {
-            this.potions.push(new Potion(this.player.x + (Math.random() - 0.5) * 30, this.player.y + (Math.random() - 0.5) * 30, 'slow_time'));
-        } else if (result.startsWith('upgrade_')) {
-            // Apply upgrade to currently selected item
-            const selectedItem = this.slots[this.selectedSlot];
-            if (!selectedItem) {
-                this.audio.playPlayerHit();
-                return;
-            }
-
-            if (result === 'upgrade_damage_3') {
-                selectedItem.attackDamage += 3;
-                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +3';
-            } else if (result === 'upgrade_damage_5') {
-                selectedItem.attackDamage += 5;
-                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +5';
-            } else if (result === 'upgrade_damage_8') {
-                selectedItem.attackDamage += 8;
-                selectedItem.name = selectedItem.name.replace(/ \+(\d+)$/, '') + ' +8';
-            } else if (result === 'upgrade_range_5') {
-                selectedItem.attackRange += 5;
-                selectedItem.name += ' (дальн.)';
-            } else if (result === 'upgrade_range_10') {
-                selectedItem.attackRange += 10;
-                selectedItem.name += ' (дальн.+)';
-            } else if (result === 'upgrade_fire') {
-                selectedItem.arrowType = 'fire';
-                selectedItem.name = 'Огненный ' + selectedItem.name;
-            } else if (result === 'upgrade_ice') {
-                selectedItem.arrowType = 'ice';
-                selectedItem.name = 'Ледяной ' + selectedItem.name;
-            } else if (result === 'upgrade_poison') {
-                selectedItem.arrowType = 'poison';
-                selectedItem.name = 'Отравленный ' + selectedItem.name;
-            }
-
-            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-        } else if (result.armorType) {
-            // Equip armor to the appropriate slot
-            this.armorSlots[result.armorType] = result;
-            this.updateArmorStats();
-            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-        } else {
-            // Put crafted item in first empty slot
-            for (let i = 0; i < this.slots.length; i++) {
-                if (!this.slots[i]) {
-                    this.slots[i] = result;
-                    this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-                    break;
-                }
-            }
-        }
-
-        this.renderCraftingUI();
-        this.audio.playLevelUp();
-        this.particles.emit(this.player.x, this.player.y, '#ffd54f', 10, 3, 25, 4);
     }
 
     getArmorHealthBonus() {
