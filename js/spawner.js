@@ -141,7 +141,13 @@ class Spawner {
     // ========== Rocks (default and web biomes) ==========
     spawnRocks() {
         const game = this.game;
-        if (game.rocks.length >= 200) return;
+
+        // Clean up rocks that are too far from player
+        game.rocks = game.rocks.filter(r => {
+            const dx = r.x - game.player.x;
+            const dy = r.y - game.player.y;
+            return Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 30;
+        });
 
         const playerTileX = Math.floor(game.player.x / TILE_SIZE);
         const playerTileY = Math.floor(game.player.y / TILE_SIZE);
@@ -177,7 +183,13 @@ class Spawner {
     // ========== Trees (default and mossy biomes) ==========
     spawnTrees() {
         const game = this.game;
-        if (game.trees.length >= 200) return;
+
+        // Clean up trees that are too far from player
+        game.trees = game.trees.filter(t => {
+            const dx = t.x - game.player.x;
+            const dy = t.y - game.player.y;
+            return Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 30;
+        });
 
         const playerTileX = Math.floor(game.player.x / TILE_SIZE);
         const playerTileY = Math.floor(game.player.y / TILE_SIZE);
