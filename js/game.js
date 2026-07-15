@@ -62,7 +62,6 @@ class Game {
         this.particles = new ParticleSystem();
         this.audio = new AudioSystem();
         this.maxEnemies = 12;
-        this.settingsOpen = false;
         this.chestUI = new ChestUIManager(this);
         this.merchantUI = new MerchantUIManager(this);
         this.achievements = new AchievementSystem();
@@ -72,6 +71,7 @@ class Game {
         this.ui = new UIManager(this);
         this.interaction = new InteractionManager(this);
         this.combat = new CombatManager(this);
+        this.settingsUI = new SettingsUIManager(this);
         this.skills = SKILL_SLOTS.map(s => ({ key: s.key, skill: s.skill }));
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
@@ -115,29 +115,20 @@ class Game {
         // Restart button
         this.restartBtn.addEventListener('click', () => this.restartGame());
 
-        // Settings UI
-        this.settingsBtn = document.getElementById('settingsBtn');
-        this.settingsScreen = document.getElementById('settingsScreen');
-        this.settingsContent = document.getElementById('settingsContent');
-        this.settingsCloseBtn = document.getElementById('settingsCloseBtn');
-
-        this.settingsBtn.addEventListener('click', () => this.openSettings());
-        this.settingsCloseBtn.addEventListener('click', () => this.closeSettings());
-
         // Input handling
         window.addEventListener('keydown', (e) => {
             if (this.gameOver) return;
-            if (this.settingsOpen) {
+            if (this.settingsUI.isOpen) {
                 // Handle key rebinding
-                if (this.rebindingAction) {
+                if (this.settingsUI.rebindingAction) {
                     e.preventDefault();
-                    this.settings.bindKey(this.rebindingAction, e.key);
-                    this.rebindingAction = null;
-                    this.renderSettings();
+                    this.settings.bindKey(this.settingsUI.rebindingAction, e.key);
+                    this.settingsUI.rebindingAction = null;
+                    this.settingsUI.render();
                     return;
                 }
                 if (e.key === 'Escape') {
-                    this.closeSettings();
+                    this.settingsUI.close();
                     return;
                 }
                 return;
@@ -942,60 +933,6 @@ class Game {
 
         // Draw UI overlay
         this.ui.draw();
-    }
-
-    openSettings() {
-        this.settingsOpen = true;
-        this.settingsScreen.style.display = 'flex';
-        this.renderSettings();
-    }
-
-    closeSettings() {
-        this.settingsOpen = false;
-        this.settingsScreen.style.display = 'none';
-        this.rebindingAction = null;
-    }
-
-    renderSettings() {
-        const actions = [
-            { action: 'up', label: 'Вверх' },
-            { action: 'down', label: 'Вниз' },
-            { action: 'left', label: 'Влево' },
-            { action: 'right', label: 'Вправо' },
-            { action: 'attack', label: 'Атака' },
-            { action: 'interact', label: 'Взаимодействие (E)' }
-        ];
-
-        this.settingsContent.innerHTML = '';
-        for (const { action, label } of actions) {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:4px;';
-
-            const labelEl = document.createElement('span');
-            labelEl.textContent = label;
-            labelEl.style.cssText = 'color:#ccc; font-size:14px;';
-
-            const keyEl = document.createElement('button');
-            const keyName = this.settings.getKey(action);
-            keyEl.textContent = keyName === ' ' ? 'Пробел' : keyName.toUpperCase();
-            keyEl.style.cssText = 'padding:4px 12px; background:#444; color:#fff; border:1px solid #666; border-radius:3px; cursor:pointer; font-family:monospace; font-size:13px; min-width:80px; text-align:center;';
-
-            keyEl.addEventListener('click', () => {
-                this.rebindingAction = action;
-                keyEl.textContent = '...';
-                keyEl.style.background = '#666';
-                setTimeout(() => {
-                    if (this.rebindingAction === action) {
-                        keyEl.textContent = keyName === ' ' ? 'Пробел' : keyName.toUpperCase();
-                        keyEl.style.background = '#444';
-                    }
-                }, 3000);
-            });
-
-            row.appendChild(labelEl);
-            row.appendChild(keyEl);
-            this.settingsContent.appendChild(row);
-        }
     }
 
     getArmorHealthBonus() {
