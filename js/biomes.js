@@ -70,29 +70,50 @@ const BIOME_CONFIG = {
 };
 
 /**
- * Get biome type at given tile coordinates
+ * Get biome type at given tile coordinates using temperature and weirdness
  * @param {PerlinNoise} perlin - Perlin noise instance
  * @param {number} tileX - Tile X coordinate
  * @param {number} tileY - Tile Y coordinate
  * @returns {number} Biome type constant
  */
 function getBiomeAt(perlin, tileX, tileY) {
-    const biomeNoise = perlin.octaveNoise(tileX * 0.03, tileY * 0.03, 2, 0.5);
-    if (biomeNoise > 0.3 && biomeNoise < 0.4) {
-        return BIOME_MOSSY;
-    } else if (biomeNoise >= 0.4 && biomeNoise < 0.5) {
-        return BIOME_WEB;
-    } else if (biomeNoise >= 0.5 && biomeNoise < 0.6) {
-        return BIOME_LAVA;
-    } else if (biomeNoise >= 0.6 && biomeNoise < 0.7) {
-        return BIOME_ICE;
-    } else if (biomeNoise >= 0.7 && biomeNoise < 0.8) {
-        return BIOME_DESERT;
-    } else if (biomeNoise >= 0.8 && biomeNoise < 0.9) {
-        return BIOME_SWAMP;
-    } else if (biomeNoise >= 0.9) {
-        return BIOME_MAGIC;
+    // Temperature noise (scale 0.02 for larger regions)
+    const temperature = perlin.octaveNoise(tileX * 0.02, tileY * 0.02, 2, 0.5);
+    // Weirdness noise (scale 0.025, different offset for independence)
+    const weirdness = perlin.octaveNoise(tileX * 0.025 + 100, tileY * 0.025 + 100, 2, 0.5);
+
+    // High weirdness → magical, crystal, web biomes
+    if (weirdness > 0.7) {
+        // Within high weirdness, temperature determines sub-type
+        if (temperature > 0.5) {
+            return BIOME_MAGIC;
+        } else if (temperature > 0.2) {
+            return BIOME_CRYSTAL;
+        } else {
+            return BIOME_WEB;
+        }
     }
+
+    // Medium weirdness → swamp, mossy
+    if (weirdness > 0.4) {
+        if (temperature > 0.5) {
+            return BIOME_SWAMP;
+        } else {
+            return BIOME_MOSSY;
+        }
+    }
+
+    // Low weirdness → temperature-based biomes
+    if (temperature > 0.7) {
+        return BIOME_LAVA;
+    } else if (temperature > 0.5) {
+        return BIOME_DESERT;
+    } else if (temperature > 0.3) {
+        return BIOME_NORMAL;
+    } else if (temperature > 0.15) {
+        return BIOME_ICE;
+    }
+
     return BIOME_NORMAL;
 }
 
