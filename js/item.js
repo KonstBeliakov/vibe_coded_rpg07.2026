@@ -99,4 +99,72 @@ class Item {
         item.arrowType = arrowType;
         return item;
     }
+
+    /**
+     * Draw an inventory slot at the given position
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} x - Slot X position
+     * @param {number} y - Slot Y position
+     * @param {number} size - Slot size (width and height)
+     * @param {Item|null} item - Item to draw, or null for empty slot
+     * @param {boolean} isSelected - Whether this slot is currently selected
+     * @param {number} slotNumber - Slot number (1-8) to display
+     * @returns {object|null} Tooltip info { text, x, y } if mouse is hovering, or null
+     */
+    static drawSlot(ctx, x, y, size, item, isSelected, slotNumber, mouseX, mouseY) {
+        // Slot background
+        ctx.fillStyle = isSelected ? '#666' : '#444';
+        ctx.fillRect(x, y, size, size);
+
+        // Rarity glow for items
+        if (item) {
+            const glowColor = item.getRarityGlow ? item.getRarityGlow() : 'rgba(158,158,158,0.3)';
+            ctx.fillStyle = glowColor;
+            ctx.fillRect(x, y, size, size);
+        }
+
+        // Slot border with rarity color
+        let borderColor = '#888';
+        if (item) {
+            borderColor = item.getRarityColor ? item.getRarityColor() : '#888';
+        }
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(x, y, size, size);
+
+        // Slot number
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px monospace';
+        ctx.fillText(slotNumber, x + 3, y + 12);
+
+        // Item rendering
+        if (item) {
+            if (item.loaded) {
+                ctx.drawImage(item.texture, x + 5, y + 5, size - 10, size - 10);
+            } else {
+                ctx.fillStyle = '#888';
+                ctx.font = '10px monospace';
+                ctx.fillText(item.name, x + 5, y + size / 2 + 5);
+            }
+
+            // Check mouse hover for tooltip
+            if (mouseX >= x && mouseX <= x + size && mouseY >= y && mouseY <= y + size) {
+                let tooltipText = item.name;
+                let details = [];
+                details.push(`Редкость: ${item.getRarityName ? item.getRarityName() : 'Обычный'}`);
+                if (item.attackDamage > 0) details.push(`Урон: +${item.attackDamage}`);
+                if (item.attackRange > 0) details.push(`Радиус: +${item.attackRange}`);
+                if (item.arrowType && item.arrowType !== 'normal') {
+                    const typeNames = { fire: 'Огненный', ice: 'Ледяной', poison: 'Отравленный' };
+                    details.push(`Тип стрел: ${typeNames[item.arrowType]}`);
+                }
+                if (details.length > 0) {
+                    tooltipText += '\n' + details.join('\n');
+                }
+                return { text: tooltipText, x: mouseX + 15, y: mouseY - 10 };
+            }
+        }
+
+        return null;
+    }
 }

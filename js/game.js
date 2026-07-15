@@ -1235,77 +1235,22 @@ class Game {
         const startX = (this.width - totalWidth) / 2;
         const startY = this.height - slotSize - 15;
 
-        let tooltipText = null;
-        let tooltipX = 0;
-        let tooltipY = 0;
+        let tooltipData = null;
+        const mouseCanvasX = this.mouseX - this.canvas.getBoundingClientRect().left;
+        const mouseCanvasY = this.mouseY - this.canvas.getBoundingClientRect().top;
 
         for (let i = 0; i < this.slots.length; i++) {
             const sx = startX + i * (slotSize + slotMargin);
             const sy = startY;
-
-            // Slot background
-            ctx.fillStyle = i === this.selectedSlot ? '#666' : '#444';
-            ctx.fillRect(sx, sy, slotSize, slotSize);
-
-            // Rarity glow for items
-            if (this.slots[i]) {
-                const item = this.slots[i];
-                const glowColor = item.getRarityGlow ? item.getRarityGlow() : 'rgba(158,158,158,0.3)';
-                ctx.fillStyle = glowColor;
-                ctx.fillRect(sx, sy, slotSize, slotSize);
-            }
-
-            // Slot border with rarity color
-            let borderColor = '#888';
-            if (this.slots[i]) {
-                borderColor = this.slots[i].getRarityColor ? this.slots[i].getRarityColor() : '#888';
-            }
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = i === this.selectedSlot ? 2 : 1;
-            ctx.strokeRect(sx, sy, slotSize, slotSize);
-
-            ctx.fillStyle = '#aaa';
-            ctx.font = '10px monospace';
-            ctx.fillText(i + 1, sx + 3, sy + 12);
-
-            if (this.slots[i]) {
-                const item = this.slots[i];
-                if (item.loaded) {
-                    ctx.drawImage(item.texture, sx + 5, sy + 5, slotSize - 10, slotSize - 10);
-                } else {
-                    ctx.fillStyle = '#888';
-                    ctx.font = '10px monospace';
-                    ctx.fillText(item.name, sx + 5, sy + slotSize / 2 + 5);
-                }
-
-                // Check mouse hover for tooltip
-                const mouseCanvasX = this.mouseX - this.canvas.getBoundingClientRect().left;
-                const mouseCanvasY = this.mouseY - this.canvas.getBoundingClientRect().top;
-                if (mouseCanvasX >= sx && mouseCanvasX <= sx + slotSize &&
-                    mouseCanvasY >= sy && mouseCanvasY <= sy + slotSize) {
-                    tooltipText = item.name;
-                    tooltipX = mouseCanvasX + 15;
-                    tooltipY = mouseCanvasY - 10;
-
-                    // Build tooltip details
-                    let details = [];
-                    details.push(`Редкость: ${item.getRarityName ? item.getRarityName() : 'Обычный'}`);
-                    if (item.attackDamage > 0) details.push(`Урон: +${item.attackDamage}`);
-                    if (item.attackRange > 0) details.push(`Радиус: +${item.attackRange}`);
-                    if (item.arrowType && item.arrowType !== 'normal') {
-                        const typeNames = { fire: 'Огненный', ice: 'Ледяной', poison: 'Отравленный' };
-                        details.push(`Тип стрел: ${typeNames[item.arrowType]}`);
-                    }
-                    if (details.length > 0) {
-                        tooltipText += '\n' + details.join('\n');
-                    }
-                }
+            const result = Item.drawSlot(ctx, sx, sy, slotSize, this.slots[i], i === this.selectedSlot, i + 1, mouseCanvasX, mouseCanvasY);
+            if (result) {
+                tooltipData = result;
             }
         }
 
         // Draw tooltip
-        if (tooltipText) {
-            const lines = tooltipText.split('\n');
+        if (tooltipData) {
+            const lines = tooltipData.text.split('\n');
             const lineHeight = 16;
             const padding = 6;
             let maxWidth = 0;
@@ -1318,8 +1263,8 @@ class Game {
             const tooltipH = lines.length * lineHeight + padding * 2;
 
             // Keep tooltip on screen
-            let ttX = tooltipX;
-            let ttY = tooltipY;
+            let ttX = tooltipData.x;
+            let ttY = tooltipData.y;
             if (ttX + tooltipW > this.width) ttX = this.width - tooltipW - 5;
             if (ttY + tooltipH > this.height) ttY = this.height - tooltipH - 5;
             if (ttX < 0) ttX = 5;
