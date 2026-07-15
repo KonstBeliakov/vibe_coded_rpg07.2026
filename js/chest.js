@@ -1,3 +1,81 @@
+// ========== Chest UI Manager ==========
+class ChestUIManager {
+    constructor(game) {
+        this.game = game;
+        this.isOpen = false;
+        this.activeChest = null;
+    }
+
+    open(chest) {
+        this.isOpen = true;
+        this.activeChest = chest;
+        document.getElementById('chestUI').style.display = 'block';
+        this.render();
+    }
+
+    close() {
+        this.isOpen = false;
+        this.activeChest = null;
+        document.getElementById('chestUI').style.display = 'none';
+    }
+
+    render() {
+        if (!this.activeChest) return;
+        const container = document.getElementById('chestItems');
+        container.innerHTML = '';
+
+        for (let i = 0; i < this.activeChest.storedItems.length; i++) {
+            const item = this.activeChest.storedItems[i];
+            const el = document.createElement('div');
+            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #666; border-radius:3px; cursor:pointer; font-size:11px;';
+            el.textContent = item.name;
+            el.title = 'Нажми чтобы забрать';
+            el.addEventListener('click', () => this.withdraw(i));
+            container.appendChild(el);
+        }
+
+        if (this.activeChest.storedItems.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
+            empty.textContent = 'Сундук пуст';
+            container.appendChild(empty);
+        }
+
+        document.getElementById('chestSelectedSlot').textContent = this.game.selectedSlot + 1;
+    }
+
+    deposit() {
+        if (!this.activeChest) return;
+        const item = this.game.slots[this.game.selectedSlot];
+        if (!item) return;
+        // Don't allow depositing starter items
+        if (this.game.selectedSlot === 0 && item.name === 'Меч') return;
+        if (this.game.selectedSlot === 1 && item.name === 'Лук') return;
+
+        this.activeChest.addItem(item);
+        this.game.slots[this.game.selectedSlot] = null;
+        this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+        this.render();
+        this.game.audio.playHit();
+    }
+
+    withdraw(index) {
+        if (!this.activeChest) return;
+        const item = this.activeChest.removeItem(index);
+        if (!item) return;
+
+        for (let i = 0; i < this.game.slots.length; i++) {
+            if (!this.game.slots[i]) {
+                this.game.slots[i] = item;
+                this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+                this.render();
+                this.game.audio.playLevelUp();
+                return;
+            }
+        }
+    }
+}
+
 // ========== Chest ==========
 class Chest {
     constructor(x, y, isStorage = false) {

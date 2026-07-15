@@ -63,8 +63,7 @@ class Game {
         this.audio = new AudioSystem();
         this.maxEnemies = 12;
         this.settingsOpen = false;
-        this.chestUIOpen = false;
-        this.activeChest = null;
+        this.chestUI = new ChestUIManager(this);
         this.merchantUIOpen = false;
         this.activeMerchant = null;
         this.achievements = new AchievementSystem();
@@ -164,8 +163,8 @@ class Game {
             }
 
             if (e.key === 'q' || e.key === 'Q') {
-                if (this.chestUIOpen) {
-                    this.depositItem();
+                if (this.chestUI.isOpen) {
+                    this.chestUI.deposit();
                 } else if (this.merchantUIOpen) {
                     this.sellToMerchant();
                 }
@@ -228,8 +227,8 @@ class Game {
         }
 
         // If chest UI is open, close it
-        if (this.chestUIOpen) {
-            this.closeChestUI();
+        if (this.chestUI.isOpen) {
+            this.chestUI.close();
             return;
         }
 
@@ -265,7 +264,7 @@ class Game {
                 }
                 // Open storage chest UI
                 if (chest.isStorage) {
-                    this.openChestUI(chest);
+                    this.chestUI.open(chest);
                 }
                 break;
             }
@@ -1611,77 +1610,6 @@ class Game {
             row.appendChild(labelEl);
             row.appendChild(keyEl);
             this.settingsContent.appendChild(row);
-        }
-    }
-
-    openChestUI(chest) {
-        this.chestUIOpen = true;
-        this.activeChest = chest;
-        document.getElementById('chestUI').style.display = 'block';
-        this.renderChestUI();
-    }
-
-    closeChestUI() {
-        this.chestUIOpen = false;
-        this.activeChest = null;
-        document.getElementById('chestUI').style.display = 'none';
-    }
-
-    renderChestUI() {
-        if (!this.activeChest) return;
-        const container = document.getElementById('chestItems');
-        container.innerHTML = '';
-
-        // Show stored items
-        for (let i = 0; i < this.activeChest.storedItems.length; i++) {
-            const item = this.activeChest.storedItems[i];
-            const el = document.createElement('div');
-            el.style.cssText = 'padding:4px 8px; background:#444; border:1px solid #666; border-radius:3px; cursor:pointer; font-size:11px;';
-            el.textContent = item.name;
-            el.title = 'Нажми чтобы забрать';
-            el.addEventListener('click', () => this.withdrawItem(i));
-            container.appendChild(el);
-        }
-
-        if (this.activeChest.storedItems.length === 0) {
-            const empty = document.createElement('div');
-            empty.style.cssText = 'color:#666; font-size:12px; padding:8px;';
-            empty.textContent = 'Сундук пуст';
-            container.appendChild(empty);
-        }
-
-        document.getElementById('chestSelectedSlot').textContent = this.selectedSlot + 1;
-    }
-
-    depositItem() {
-        if (!this.activeChest) return;
-        const item = this.slots[this.selectedSlot];
-        if (!item) return;
-        // Don't allow depositing starter items
-        if (this.selectedSlot === 0 && item.name === 'Меч') return;
-        if (this.selectedSlot === 1 && item.name === 'Лук') return;
-
-        this.activeChest.addItem(item);
-        this.slots[this.selectedSlot] = null;
-        this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-        this.renderChestUI();
-        this.audio.playHit();
-    }
-
-    withdrawItem(index) {
-        if (!this.activeChest) return;
-        const item = this.activeChest.removeItem(index);
-        if (!item) return;
-
-        // Find first empty slot
-        for (let i = 0; i < this.slots.length; i++) {
-            if (!this.slots[i]) {
-                this.slots[i] = item;
-                this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-                this.renderChestUI();
-                this.audio.playLevelUp();
-                return;
-            }
         }
     }
 
