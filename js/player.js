@@ -105,6 +105,60 @@ class Player {
         this.hunger = Math.min(this.hunger + amount, this.maxHunger);
     }
 
+    takeDamage(amount, armorDefense = 0) {
+        const reduced = Math.max(1, amount - armorDefense);
+        this.health -= reduced;
+        if (this.health < 0) this.health = 0;
+        return reduced;
+    }
+
+    addXP(amount, game) {
+        game.playerXP += amount;
+        while (game.playerXP >= game.xpToNextLevel) {
+            game.playerXP -= game.xpToNextLevel;
+            game.playerLevel++;
+            game.xpToNextLevel = Math.floor(game.xpToNextLevel * 1.5);
+            this.maxHealth += 20;
+            this.health = Math.min(this.health + 20, this.maxHealth);
+            game.player.baseAttackDamage += 3;
+            game.player.baseAttackRange += 2;
+            game.player.applyItemStats(game.slots[game.selectedSlot], game.armorDefense, game.getArmorHealthBonus());
+            game.audio.playLevelUp();
+            game.particles.emit(this.x, this.y, '#ffd700', 20, 5, 40, 5);
+
+            // Spawn boss area every N levels
+            if (game.playerLevel % game.bossLevelInterval === 0) {
+                game.spawner.spawnBossArea();
+            }
+        }
+    }
+
+    ensureSafePosition(tileMap, playerSize) {
+        const half = playerSize / 2;
+        const corners = [
+            { x: this.x - half, y: this.y - half },
+            { x: this.x + half, y: this.y - half },
+            { x: this.x - half, y: this.y + half },
+            { x: this.x + half, y: this.y + half }
+        ];
+
+        for (const corner of corners) {
+            const tileX = Math.floor(corner.x / TILE_SIZE);
+            const tileY = Math.floor(corner.y / TILE_SIZE);
+            if (tileMap.isWall(tileX, tileY)) {
+                const spawnPos = tileMap.findEmptyTile(
+                    Math.floor(this.x / TILE_SIZE),
+                    Math.floor(this.y / TILE_SIZE),
+                    5,
+                    half
+                );
+                this.x = spawnPos.x;
+                this.y = spawnPos.y;
+                return;
+            }
+        }
+    }
+
     attack() {
         if (this.attackTimer > 0) return false;
         this.attackTimer = this.attackCooldown;

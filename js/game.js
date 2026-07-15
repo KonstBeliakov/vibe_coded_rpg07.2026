@@ -405,35 +405,7 @@ class Game {
     }
 
     ensurePlayerSafePosition() {
-        // Check if player is inside a wall and push them to a safe position
-        const half = this.player.size / 2;
-        const corners = [
-            { x: this.player.x - half, y: this.player.y - half },
-            { x: this.player.x + half, y: this.player.y - half },
-            { x: this.player.x - half, y: this.player.y + half },
-            { x: this.player.x + half, y: this.player.y + half }
-        ];
-
-        let inWall = false;
-        for (const corner of corners) {
-            const tileX = Math.floor(corner.x / TILE_SIZE);
-            const tileY = Math.floor(corner.y / TILE_SIZE);
-            if (this.tileMap.isWall(tileX, tileY)) {
-                inWall = true;
-                break;
-            }
-        }
-
-        if (inWall) {
-            const spawnPos = this.tileMap.findEmptyTile(
-                Math.floor(this.player.x / TILE_SIZE),
-                Math.floor(this.player.y / TILE_SIZE),
-                5,
-                half
-            );
-            this.player.x = spawnPos.x;
-            this.player.y = spawnPos.y;
-        }
+        this.player.ensureSafePosition(this.tileMap, this.player.size);
     }
 
     loadGame() {
@@ -510,24 +482,7 @@ class Game {
     }
 
     addXP(amount) {
-        this.playerXP += amount;
-        while (this.playerXP >= this.xpToNextLevel) {
-            this.playerXP -= this.xpToNextLevel;
-            this.playerLevel++;
-            this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
-            this.player.maxHealth += 20;
-            this.player.health = Math.min(this.player.health + 20, this.player.maxHealth);
-            this.player.baseAttackDamage += 3;
-            this.player.baseAttackRange += 2;
-            this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-            this.audio.playLevelUp();
-            this.particles.emit(this.player.x, this.player.y, '#ffd700', 20, 5, 40, 5);
-
-            // Spawn boss area every N levels
-            if (this.playerLevel % this.bossLevelInterval === 0) {
-                this.spawner.spawnBossArea();
-            }
-        }
+        this.player.addXP(amount, this);
     }
 
     spawnBoss() {
@@ -860,12 +815,10 @@ class Game {
             enemy.update(this.player.x, this.player.y, this.tileMap, this.player);
             enemy.speed = originalSpeed;
             if (enemy.tryAttack(this.player.x, this.player.y)) {
-                const reducedDamage = Math.max(1, enemy.attackDamage - this.armorDefense);
-                this.player.health -= reducedDamage;
+                this.player.takeDamage(enemy.attackDamage, this.armorDefense);
                 this.damageFlashTimer = this.damageFlashDuration;
                 this.audio.playPlayerHit();
                 this.particles.emit(this.player.x, this.player.y, '#ff1744', 10, 3, 20, 3);
-                if (this.player.health < 0) this.player.health = 0;
             }
         }
 
@@ -881,10 +834,9 @@ class Game {
         if (this.boss) {
             this.boss.update(this.player.x, this.player.y);
             if (this.boss.tryAttack(this.player.x, this.player.y)) {
-                this.player.health -= this.boss.attackDamage;
+                this.player.takeDamage(this.boss.attackDamage, this.armorDefense);
                 this.audio.playPlayerHit();
                 this.particles.emit(this.player.x, this.player.y, '#d500f9', 15, 4, 30, 4);
-                if (this.player.health < 0) this.player.health = 0;
             }
         }
 
