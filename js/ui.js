@@ -5,13 +5,15 @@ class UIManager {
     }
 
     draw() {
+        // Draw fog of war and night overlay FIRST (behind everything)
+        this.drawFogOfWar();
+        this.drawNightOverlay();
+        // Draw UI elements on top
         this.drawHPBar();
         this.drawInventory();
         this.drawArmorSlots();
         this.drawSkillSlots();
         this.drawMinimap();
-        this.drawFogOfWar();
-        this.drawNightOverlay();
         this.drawDamageFlash();
         this.drawUIText();
         this.drawAchievementNotifications();

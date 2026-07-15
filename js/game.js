@@ -807,32 +807,6 @@ class Game {
 
         this.tileMap.draw(ctx, offsetX, offsetY);
 
-        // Draw fog of war
-        const viewTileW = Math.ceil(this.width / TILE_SIZE) + 2;
-        const viewTileH = Math.ceil(this.height / TILE_SIZE) + 2;
-        const playerTX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTY = Math.floor(this.player.y / TILE_SIZE);
-        for (let dy = -Math.ceil(viewTileH / 2); dy <= Math.ceil(viewTileH / 2); dy++) {
-            for (let dx = -Math.ceil(viewTileW / 2); dx <= Math.ceil(viewTileW / 2); dx++) {
-                const tx = playerTX + dx;
-                const ty = playerTY + dy;
-                const key = `${tx},${ty}`;
-                if (!this.exploredTiles.has(key)) {
-                    const sx = tx * TILE_SIZE + offsetX;
-                    const sy = ty * TILE_SIZE + offsetY;
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-                    ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-                }
-            }
-        }
-
-        // Night overlay - dark blue tint when night
-        if (this.isNight) {
-            const nightAlpha = 0.3;
-            ctx.fillStyle = `rgba(10, 5, 30, ${nightAlpha})`;
-            ctx.fillRect(0, 0, this.width, this.height);
-        }
-
         // Draw safe zones
         // Draw spawn safe zone
         ctx.save();
