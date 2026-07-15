@@ -77,10 +77,10 @@ const BIOME_CONFIG = {
  * @returns {number} Biome type constant
  */
 function getBiomeAt(perlin, tileX, tileY) {
-    // Temperature noise (scale 0.02 for larger regions)
-    const temperature = perlin.octaveNoise(tileX * 0.02, tileY * 0.02, 2, 0.5);
-    // Weirdness noise (scale 0.025, different offset for independence)
-    const weirdness = perlin.octaveNoise(tileX * 0.025 + 100, tileY * 0.025 + 100, 2, 0.5);
+    // Temperature noise (scale 0.008 for much larger regions)
+    const temperature = perlin.octaveNoise(tileX * 0.008, tileY * 0.008, 2, 0.5);
+    // Weirdness noise (scale 0.01, different offset for independence)
+    const weirdness = perlin.octaveNoise(tileX * 0.01 + 100, tileY * 0.01 + 100, 2, 0.5);
 
     // High weirdness → magical, crystal, web biomes
     if (weirdness > 0.7) {

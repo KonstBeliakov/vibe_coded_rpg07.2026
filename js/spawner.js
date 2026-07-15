@@ -141,13 +141,13 @@ class Spawner {
     // ========== Rocks (default and web biomes) ==========
     spawnRocks() {
         const game = this.game;
-        if (game.rocks.length >= 40) return;
+        if (game.rocks.length >= 200) return;
 
         const playerTileX = Math.floor(game.player.x / TILE_SIZE);
         const playerTileY = Math.floor(game.player.y / TILE_SIZE);
 
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
+        for (let dy = -12; dy <= 12; dy++) {
+            for (let dx = -12; dx <= 12; dx++) {
                 const tx = playerTileX + dx;
                 const ty = playerTileY + dy;
 
@@ -167,7 +167,7 @@ class Spawner {
                 }
                 if (alreadyHasRock) continue;
 
-                if (Math.random() < 0.15) {
+                if (Math.random() < 0.005) {
                     game.rocks.push(new Rock(worldX, worldY));
                 }
             }
@@ -177,13 +177,13 @@ class Spawner {
     // ========== Trees (default and mossy biomes) ==========
     spawnTrees() {
         const game = this.game;
-        if (game.trees.length >= 40) return;
+        if (game.trees.length >= 200) return;
 
         const playerTileX = Math.floor(game.player.x / TILE_SIZE);
         const playerTileY = Math.floor(game.player.y / TILE_SIZE);
 
-        for (let dy = -8; dy <= 8; dy++) {
-            for (let dx = -8; dx <= 8; dx++) {
+        for (let dy = -12; dy <= 12; dy++) {
+            for (let dx = -12; dx <= 12; dx++) {
                 const tx = playerTileX + dx;
                 const ty = playerTileY + dy;
 
@@ -203,7 +203,7 @@ class Spawner {
                 }
                 if (alreadyHasTree) continue;
 
-                if (Math.random() < 0.12) {
+                if (Math.random() < 0.005) {
                     const isDead = biome === BIOME_NORMAL;
                     game.trees.push(new Tree(worldX, worldY, isDead));
                 }

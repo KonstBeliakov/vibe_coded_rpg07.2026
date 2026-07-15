@@ -235,13 +235,13 @@ class TileMap {
                 const screenY = y * TILE_SIZE + offsetY;
 
                 const tile = this.getTile(x, y);
+                const biome = this.getBiome(x, y);
                 if (tile === TILE_ORE) {
                     ctx.fillStyle = '#8d6e00'; // Gold/ore color
                 } else if (tile === TILE_WALL) {
-                    ctx.fillStyle = '#555';
+                    ctx.fillStyle = getBiomeWallColor(biome);
                 } else {
                     // Choose floor color based on biome
-                    const biome = this.getBiome(x, y);
                     ctx.fillStyle = getBiomeFloorColor(biome);
                 }
 
