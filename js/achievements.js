@@ -128,12 +128,34 @@ class AchievementSystem {
     drawNotification(ctx) {
         if (this.notificationQueue.length === 0) return;
 
+        // Update timer
+        this.notificationTimer += 16; // ~60fps
+
+        // Show for 3 seconds, then fade out for 0.5 seconds
+        const showDuration = 3000;
+        const fadeDuration = 500;
+        const totalDuration = showDuration + fadeDuration;
+
+        if (this.notificationTimer >= totalDuration) {
+            this.notificationQueue.shift();
+            this.notificationTimer = 0;
+            return;
+        }
+
         const ach = this.notificationQueue[0];
         const text = `${ach.icon} ${ach.name}: ${ach.desc}`;
         const padding = 10;
         const y = 80;
 
+        // Calculate alpha for fade out
+        let alpha = 1.0;
+        if (this.notificationTimer > showDuration) {
+            const fadeProgress = (this.notificationTimer - showDuration) / fadeDuration;
+            alpha = 1.0 - fadeProgress;
+        }
+
         ctx.save();
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
         ctx.font = '14px monospace';
         const textWidth = ctx.measureText(text).width;
