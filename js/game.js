@@ -70,6 +70,7 @@ class Game {
         this.crafting = new CraftingSystem();
         this.craftingUI = new CraftingUIManager(this);
         this.ui = new UIManager(this);
+        this.interaction = new InteractionManager(this);
         this.skills = SKILL_SLOTS.map(s => ({ key: s.key, skill: s.skill }));
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 300;
@@ -146,7 +147,7 @@ class Game {
                 this.playerAttack();
             }
             if (e.key === this.settings.getKey('interact')) {
-                this.interact();
+                this.interaction.interact();
             }
             if (e.key === 'c' || e.key === 'C') {
                 if (this.craftingUI.isOpen) {
@@ -214,173 +215,6 @@ class Game {
     resizeCanvas() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-    }
-
-    interact() {
-        const px = this.player.x;
-        const py = this.player.y;
-
-        // If merchant UI is open, close it
-        if (this.merchantUI.isOpen) {
-            this.merchantUI.close();
-            return;
-        }
-
-        // If chest UI is open, close it
-        if (this.chestUI.isOpen) {
-            this.chestUI.close();
-            return;
-        }
-
-        // Check chests
-        for (const chest of this.chests) {
-            if (chest.opened) continue;
-            const dx = chest.x - px;
-            const dy = chest.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= chest.interactRange) {
-                const loot = chest.open();
-                if (loot) {
-                    this.achievements.addChestOpen();
-                    this.audio.playHit();
-                    this.particles.emit(chest.x, chest.y, '#ffd700', 10, 3, 25, 4);
-                    for (const item of loot) {
-                        if (item === 'potion_health' || item === 'potion_speed') {
-                            const type = item === 'potion_health' ? 'health' : 'speed';
-                            this.potions.push(new Potion(chest.x + (Math.random() - 0.5) * 20, chest.y + (Math.random() - 0.5) * 20, type));
-                        } else if (item === 'weapon') {
-                            const dist = Math.sqrt(chest.x * chest.x + chest.y * chest.y);
-                            const weapon = Item.generateWeapon(dist);
-                            // Put weapon in first empty slot
-                            for (let i = 0; i < this.slots.length; i++) {
-                                if (!this.slots[i]) {
-                                    this.slots[i] = weapon;
-                                    this.player.applyItemStats(this.slots[this.selectedSlot], this.armorDefense, this.getArmorHealthBonus());
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                // Open storage chest UI
-                if (chest.isStorage) {
-                    this.chestUI.open(chest);
-                }
-                break;
-            }
-        }
-
-        // Check merchant
-        if (this.merchant) {
-            const dx = this.merchant.x - px;
-            const dy = this.merchant.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= this.merchant.interactRange) {
-                this.merchantUI.open();
-                return;
-            }
-        }
-
-        // Check beds
-        for (const bed of this.beds) {
-            const dx = bed.x - px;
-            const dy = bed.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= bed.interactRange) {
-                if (!bed.activated) {
-                    bed.activate();
-                    this.spawnBedX = bed.x;
-                    this.spawnBedY = bed.y;
-                    this.audio.playLevelUp();
-                    this.particles.emit(bed.x, bed.y, '#66bb6a', 10, 3, 25, 4);
-                }
-                break;
-            }
-        }
-
-        // Check flowers
-        for (const flower of this.flowers) {
-            if (flower.collected) continue;
-            const dx = flower.x - px;
-            const dy = flower.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= flower.interactRange) {
-                if (flower.interact(this.player)) {
-                    this.audio.playLevelUp();
-                    this.particles.emit(flower.x, flower.y, '#42a5f5', 8, 3, 20, 3);
-                }
-                break;
-            }
-        }
-
-        // Check thorn flowers (collect to get essence)
-        for (const thorn of this.thornFlowers) {
-            if (thorn.collected) continue;
-            const dx = thorn.x - px;
-            const dy = thorn.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= thorn.interactRange) {
-                if (thorn.interact(this.player)) {
-                    this.crafting.addResource('essence', thorn.essenceReward);
-                    this.audio.playLevelUp();
-                    this.particles.emit(thorn.x, thorn.y, '#e53935', 8, 3, 20, 3);
-                }
-                break;
-            }
-        }
-
-        // Check potions on ground
-        for (const potion of this.potions) {
-            if (potion.collected) continue;
-            const dx = potion.x - px;
-            const dy = potion.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 30) {
-                potion.apply(this.player, this);
-                this.audio.playLevelUp();
-                const colorMap = {
-                    'health': '#e53935', 'speed': '#42a5f5', 'invisibility': '#e0e0e0',
-                    'regen': '#4caf50', 'attack_boost': '#ff6d00', 'slow_time': '#00bcd4'
-                };
-                this.particles.emit(potion.x, potion.y, colorMap[potion.type] || '#e53935', 8, 3, 20, 3);
-            }
-        }
-
-        // Check rocks (collect to get stone)
-        for (const rock of this.rocks) {
-            if (rock.collected) continue;
-            const dx = rock.x - px;
-            const dy = rock.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= rock.interactRange) {
-                if (rock.interact(this.player)) {
-                    this.crafting.addResource('stone', rock.stoneAmount);
-                    this.audio.playHit();
-                    this.particles.emit(rock.x, rock.y, '#9e9e9e', 6, 2, 15, 3);
-                }
-                break;
-            }
-        }
-
-        // Check trees (chop to get wood)
-        const selectedItem = this.slots[this.selectedSlot];
-        const isAxe = selectedItem && selectedItem.isAxe;
-        for (const tree of this.trees) {
-            if (tree.collected) continue;
-            const dx = tree.x - px;
-            const dy = tree.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= tree.interactRange) {
-                if (tree.chop(this.player)) {
-                    const woodAmount = isAxe ? tree.woodAmount + 2 : tree.woodAmount;
-                    this.crafting.addResource('wood', woodAmount);
-                    this.audio.playHit();
-                    const color = tree.isDead ? '#6d4c41' : '#388e3c';
-                    this.particles.emit(tree.x, tree.y, color, 8, 3, 20, 3);
-                }
-                break;
-            }
-        }
     }
 
     saveGame() {
