@@ -73,23 +73,35 @@ class Enemy {
                     this.y += (dy / dist) * this.speed;
                 }
             } else {
-                // Fallback: move directly towards player
+                // Fallback: move directly towards player, but check walls
                 const dx = playerX - this.x;
                 const dy = playerY - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 0) {
-                    this.x += (dx / dist) * this.speed;
-                    this.y += (dy / dist) * this.speed;
+                    const newX = this.x + (dx / dist) * this.speed;
+                    const newY = this.y + (dy / dist) * this.speed;
+                    const tileX = Math.floor(newX / TILE_SIZE);
+                    const tileY = Math.floor(newY / TILE_SIZE);
+                    if (!tileMap.isWall(tileX, tileY)) {
+                        this.x = newX;
+                        this.y = newY;
+                    }
                 }
             }
         } else {
-            // Direct path - move straight towards player
+            // Direct path - move straight towards player, but check walls
             const dx = playerX - this.x;
             const dy = playerY - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 0) {
-                this.x += (dx / dist) * this.speed;
-                this.y += (dy / dist) * this.speed;
+                const newX = this.x + (dx / dist) * this.speed;
+                const newY = this.y + (dy / dist) * this.speed;
+                const tileX = Math.floor(newX / TILE_SIZE);
+                const tileY = Math.floor(newY / TILE_SIZE);
+                if (!tileMap.isWall(tileX, tileY)) {
+                    this.x = newX;
+                    this.y = newY;
+                }
             }
         }
 
