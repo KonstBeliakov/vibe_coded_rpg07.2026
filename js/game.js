@@ -796,6 +796,9 @@ class Game {
         }
         this.player.speedMultiplier = webSlow;
 
+        // Check if player is on ice (for sliding effect)
+        this.player.onIce = (biome === BIOME_ICE && Ice.hasAt(playerTileX, playerTileY, this.worldSeed));
+
         // Update achievements
         this.achievements.addLevel(this.playerLevel);
         const distFromSpawn = Math.sqrt(this.player.x * this.player.x + this.player.y * this.player.y);

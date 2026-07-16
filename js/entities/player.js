@@ -21,6 +21,9 @@ class Player {
         this.facingAngle = 0;
         this.invulnerable = false;
         this.speedMultiplier = 1.0;
+        this.onIce = false;
+        this.iceMomentumX = 0;
+        this.iceMomentumY = 0;
         // Hunger system
         this.maxHunger = 100;
         this.hunger = this.maxHunger;
@@ -72,8 +75,23 @@ class Player {
             this.walkTimer += 0.15;
         }
 
-        this.x += dx * this.speed * this.speedMultiplier;
-        this.y += dy * this.speed * this.speedMultiplier;
+        if (this.onIce) {
+            // On ice: accumulate momentum from input, apply friction
+            const iceAccel = 0.15;
+            const iceFriction = 0.97;
+            this.iceMomentumX += dx * iceAccel;
+            this.iceMomentumY += dy * iceAccel;
+            this.iceMomentumX *= iceFriction;
+            this.iceMomentumY *= iceFriction;
+            this.x += this.iceMomentumX * this.speed * this.speedMultiplier;
+            this.y += this.iceMomentumY * this.speed * this.speedMultiplier;
+        } else {
+            // Normal movement
+            this.iceMomentumX = 0;
+            this.iceMomentumY = 0;
+            this.x += dx * this.speed * this.speedMultiplier;
+            this.y += dy * this.speed * this.speedMultiplier;
+        }
 
         if (this.attackTimer > 0) this.attackTimer -= 16;
         if (this.attackAnimTimer > 0) this.attackAnimTimer -= 16;
