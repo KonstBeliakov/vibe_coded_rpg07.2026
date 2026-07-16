@@ -448,13 +448,20 @@ class CraftingUIManager {
             this.game.armorSlots[result.armorType] = result;
             this.game.updateArmorStats();
             this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
-        } else {
+        } else if (result instanceof Item) {
+            let added = false;
             for (let i = 0; i < this.game.slots.length; i++) {
                 if (!this.game.slots[i]) {
                     this.game.slots[i] = result;
                     this.game.player.applyItemStats(this.game.slots[this.game.selectedSlot], this.game.armorDefense, this.game.getArmorHealthBonus());
+                    added = true;
                     break;
                 }
+            }
+            if (!added) {
+                // Все слоты заняты — показываем уведомление
+                this.game.audio.playPlayerHit();
+                return;
             }
         }
 
