@@ -89,6 +89,60 @@ class TileMap {
 
         // Generate safe zones procedurally - every few chunks
         this.tryGenerateSafeZone(cx, cy, tiles);
+
+        // Generate chests deterministically using seeded random
+        this.generateChests(cx, cy, tiles);
+    }
+
+    generateChests(cx, cy, tiles) {
+        // Generate chests deterministically using seeded random
+        // About 1 chest per 4 chunks on average
+        const seed = this.perlin.seed;
+        const r = seededRandom(seed, cx, cy, 999);
+        if (r > 0.25) return; // 25% chance per chunk
+
+        // Find a good empty spot in this chunk
+        const centerTileX = cx * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);
+        const centerTileY = cy * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);
+
+        // Try to find an empty tile for the chest
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const r2 = seededRandom(seed, cx, cy, attempt + 1000);
+            const tx = centerTileX + Math.floor((r2 - 0.5) * CHUNK_SIZE);
+            const ty = centerTileY + Math.floor((seededRandom(seed, cx, cy, attempt + 2000) - 0.5) * CHUNK_SIZE);
+            
+            const lx = ((tx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const ly = ((ty % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            
+            if (lx >= 0 && lx < CHUNK_SIZE && ly >= 0 && ly < CHUNK_SIZE) {
+                if (tiles[ly][lx] === TILE_EMPTY) {
+                    // Check area is big enough for chest interaction
+                    const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+                    const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+                    
+                    // Don't spawn chests too close to safe zones
+                    let tooCloseToSafeZone = false;
+                    for (const zone of this.safeZones) {
+                        const dx = zone.x - worldX;
+                        const dy = zone.y - worldY;
+                        if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
+                            tooCloseToSafeZone = true;
+                            break;
+                        }
+                    }
+                    if (tooCloseToSafeZone) return;
+                    
+                    // Don't spawn chests too close to each other
+                    // (We can't check existing chests here since they're in game.chests)
+                    // Instead, just spawn it - the game will handle duplicates
+                    
+                    // Store chest data for later instantiation
+                    if (!this._pendingChests) this._pendingChests = [];
+                    this._pendingChests.push({ x: worldX, y: worldY, isStorage: false });
+                    return;
+                }
+            }
+        }
     }
 
     tryGenerateSafeZone(cx, cy, tiles) {

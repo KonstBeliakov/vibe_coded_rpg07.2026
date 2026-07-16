@@ -34,8 +34,6 @@ class Game {
         this.spawnTimer = 0;
         this.spawnInterval = 4000;
         this.baseSpawnInterval = 4000;
-        this.chestSpawnTimer = 0;
-        this.chestSpawnInterval = 15000;
         this.playerXP = 0;
         this.playerLevel = 1;
         this.xpToNextLevel = 50;
@@ -720,12 +718,24 @@ class Game {
             this.spawnEnemy();
         }
 
-        this.chestSpawnTimer += dt;
-        if (this.chestSpawnTimer >= this.chestSpawnInterval) {
-            this.chestSpawnTimer = 0;
-            if (this.chests.length < 5) {
-                this.spawner.spawnChest();
+        // Process pending chests from tilemap generation
+        if (this.tileMap._pendingChests && this.tileMap._pendingChests.length > 0) {
+            for (const chestData of this.tileMap._pendingChests) {
+                // Check if a chest already exists at this position
+                let alreadyExists = false;
+                for (const existing of this.chests) {
+                    const dx = existing.x - chestData.x;
+                    const dy = existing.y - chestData.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE) {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+                if (!alreadyExists) {
+                    this.chests.push(new Chest(chestData.x, chestData.y, chestData.isStorage));
+                }
             }
+            this.tileMap._pendingChests = [];
         }
 
         // Ensure each safe zone has a bed and storage chest
