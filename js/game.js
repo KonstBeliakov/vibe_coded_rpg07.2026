@@ -718,9 +718,10 @@ class Game {
             this.spawnEnemy();
         }
 
-        // Process pending chests from tilemap generation
-        if (this.tileMap._pendingChests && this.tileMap._pendingChests.length > 0) {
-            for (const chestData of this.tileMap._pendingChests) {
+        // Process pending chests from WorldGen
+        const wg = this.tileMap.worldGen;
+        if (wg._pendingChests && wg._pendingChests.length > 0) {
+            for (const chestData of wg._pendingChests) {
                 // Check if a chest already exists at this position
                 let alreadyExists = false;
                 for (const existing of this.chests) {
@@ -735,7 +736,7 @@ class Game {
                     this.chests.push(new Chest(chestData.x, chestData.y, chestData.isStorage));
                 }
             }
-            this.tileMap._pendingChests = [];
+            wg._pendingChests = [];
         }
 
         // Ensure each safe zone has a bed and storage chest
@@ -867,8 +868,8 @@ class Game {
             chest.draw(ctx, offsetX, offsetY);
         }
 
-        // Draw seed-based world objects (trees, rocks, flowers, webs, lava)
-        this.drawWorldObjects(ctx, offsetX, offsetY);
+        // Draw seed-based world objects (trees, rocks, flowers, webs, lava, ice)
+        this.tileMap.worldGen.drawObjects(ctx, offsetX, offsetY, this.tileMap, this.collectedTiles, this.lavaAnimTimer);
 
         // Draw potions
         for (const potion of this.potions) {
@@ -904,76 +905,6 @@ class Game {
 
         // Draw UI overlay
         this.ui.draw();
-    }
-
-    drawWorldObjects(ctx, offsetX, offsetY) {
-        const startX = Math.floor(-offsetX / TILE_SIZE) - 1;
-        const startY = Math.floor(-offsetY / TILE_SIZE) - 1;
-        const endX = startX + Math.ceil(ctx.canvas.width / TILE_SIZE) + 2;
-        const endY = startY + Math.ceil(ctx.canvas.height / TILE_SIZE) + 2;
-
-        for (let y = startY; y < endY; y++) {
-            for (let x = startX; x < endX; x++) {
-                const key = `${x},${y}`;
-                const isCollected = this.collectedTiles.has(key);
-                const biome = this.tileMap.getBiome(x, y);
-                const isWall = this.tileMap.isWall(x, y);
-
-                // Skip walls - objects only on empty tiles
-                if (isWall) continue;
-
-                // Trees in normal and mossy biomes
-                if ((biome === BIOME_NORMAL || biome === BIOME_MOSSY) && Tree.hasAt(x, y, this.worldSeed)) {
-                    if (!isCollected) {
-                        const isDead = biome === BIOME_NORMAL;
-                        Tree.drawAt(ctx, offsetX, offsetY, x, y, isDead);
-                    }
-                    continue; // Only one object per tile
-                }
-
-                // Rocks in normal and web biomes
-                if ((biome === BIOME_NORMAL || biome === BIOME_WEB) && Rock.hasAt(x, y, this.worldSeed)) {
-                    if (!isCollected) {
-                        Rock.drawAt(ctx, offsetX, offsetY, x, y);
-                    }
-                    continue;
-                }
-
-                // Flowers in mossy biome
-                if (biome === BIOME_MOSSY && Flower.hasAt(x, y, this.worldSeed)) {
-                    if (!isCollected) {
-                        const isThorn = Flower.isThornAt(x, y, this.worldSeed);
-                        Flower.drawAt(ctx, offsetX, offsetY, x, y, isThorn);
-                    }
-                    continue;
-                }
-
-                // Webs in web biome (near walls)
-                if (biome === BIOME_WEB && Web.hasAt(x, y, this.worldSeed)) {
-                    let nearWall = false;
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (dx === 0 && dy === 0) continue;
-                            if (this.tileMap.isWall(x + dx, y + dy)) {
-                                nearWall = true;
-                                break;
-                            }
-                        }
-                        if (nearWall) break;
-                    }
-                    if (nearWall) {
-                        Web.drawAt(ctx, offsetX, offsetY, x, y);
-                    }
-                    continue;
-                }
-
-                // Lava pools in lava biome
-                if (biome === BIOME_LAVA && LavaPool.hasAt(x, y, this.worldSeed)) {
-                    LavaPool.drawAt(ctx, offsetX, offsetY, x, y, this.lavaAnimTimer);
-                    continue;
-                }
-            }
-        }
     }
 
     getArmorHealthBonus() {
