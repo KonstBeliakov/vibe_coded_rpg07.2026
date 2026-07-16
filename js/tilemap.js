@@ -149,15 +149,20 @@ class TileMap {
         // Skip center chunk (already has safe zone at 0,0)
         if (cx === 0 && cy === 0) return;
 
-        // Generate safe zones more frequently - roughly every 2-3 chunks
-        // Use perlin noise to determine if this chunk gets a safe zone
-        const noiseVal = this.perlin.octaveNoise(cx * 3.7, cy * 3.7, 2, 0.5);
-        const shouldHaveZone = noiseVal > 0.3;
-
-        if (!shouldHaveZone) return;
-
         // Check that we don't have too many safe zones already
         if (this.safeZones.length >= 30) return;
+
+        // Deterministic safe zone generation using seededRandom
+        const seed = this.perlin.seed;
+        const r = seededRandom(seed, cx, cy, 500);
+        
+        // Safe zones are more frequent near spawn (0,0)
+        // Distance from center in chunks
+        const distFromCenter = Math.sqrt(cx * cx + cy * cy);
+        // Probability: 40% near spawn, decreasing to 15% far away
+        const probability = Math.max(0.15, 0.40 - distFromCenter * 0.005);
+        
+        if (r > probability) return;
 
         // Find a good spot for the safe zone center in this chunk
         const centerTileX = cx * CHUNK_SIZE + Math.floor(CHUNK_SIZE / 2);
@@ -194,8 +199,22 @@ class TileMap {
             }
         }
 
-        // Create the safe zone
+        // Create the safe zone with deterministic furniture positions
         const safeZone = new SafeZone(zoneWorldX, zoneWorldY, zoneRadius);
+        
+        // Deterministic furniture positions relative to safe zone center
+        const bedR = seededRandom(seed, cx, cy, 501);
+        const bedAngle = bedR * Math.PI * 2;
+        const bedDist = TILE_SIZE * 1.5;
+        safeZone.bedX = zoneWorldX + Math.cos(bedAngle) * bedDist;
+        safeZone.bedY = zoneWorldY + Math.sin(bedAngle) * bedDist;
+        
+        const chestR = seededRandom(seed, cx, cy, 502);
+        const chestAngle = chestR * Math.PI * 2;
+        const chestDist = TILE_SIZE * 2.5;
+        safeZone.chestX = zoneWorldX + Math.cos(chestAngle) * chestDist;
+        safeZone.chestY = zoneWorldY + Math.sin(chestAngle) * chestDist;
+        
         this.safeZones.push(safeZone);
     }
 

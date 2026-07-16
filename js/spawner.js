@@ -64,39 +64,36 @@ class Spawner {
     ensureSafeZoneFurniture() {
         const game = this.game;
         for (const zone of game.tileMap.safeZones) {
-            let hasBed = false;
-            for (const bed of game.beds) {
-                const dx = bed.x - zone.x;
-                const dy = bed.y - zone.y;
-                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
-                    hasBed = true;
-                    break;
+            // Use deterministic furniture positions from safe zone
+            if (zone.bedX !== undefined && zone.bedY !== undefined) {
+                let hasBed = false;
+                for (const bed of game.beds) {
+                    const dx = bed.x - zone.bedX;
+                    const dy = bed.y - zone.bedY;
+                    if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE) {
+                        hasBed = true;
+                        break;
+                    }
+                }
+                if (!hasBed) {
+                    game.beds.push(new Bed(zone.bedX, zone.bedY));
                 }
             }
 
-            if (!hasBed) {
-                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
-                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
-                const bedPos = game.tileMap.findEmptyTile(zoneTileX, zoneTileY, 3);
-                game.beds.push(new Bed(bedPos.x, bedPos.y));
-            }
-
-            let hasChest = false;
-            for (const chest of game.chests) {
-                if (!chest.isStorage) continue;
-                const dx = chest.x - zone.x;
-                const dy = chest.y - zone.y;
-                if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE * 5) {
-                    hasChest = true;
-                    break;
+            if (zone.chestX !== undefined && zone.chestY !== undefined) {
+                let hasChest = false;
+                for (const chest of game.chests) {
+                    if (!chest.isStorage) continue;
+                    const dx = chest.x - zone.chestX;
+                    const dy = chest.y - zone.chestY;
+                    if (Math.sqrt(dx * dx + dy * dy) < TILE_SIZE) {
+                        hasChest = true;
+                        break;
+                    }
                 }
-            }
-
-            if (!hasChest) {
-                const zoneTileX = Math.floor(zone.x / TILE_SIZE);
-                const zoneTileY = Math.floor(zone.y / TILE_SIZE);
-                const chestPos = game.tileMap.findEmptyTile(zoneTileX, zoneTileY, 4);
-                game.chests.push(new Chest(chestPos.x, chestPos.y, true));
+                if (!hasChest) {
+                    game.chests.push(new Chest(zone.chestX, zone.chestY, true));
+                }
             }
         }
     }
